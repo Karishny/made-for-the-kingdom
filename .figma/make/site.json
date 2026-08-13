@@ -1,0 +1,11 @@
+{
+  "title": "made for the kingdom.",
+  "description": "Engage in personal Bible study with a focus on the book of Isaiah, featuring a user-friendly interface and tailored resources for deeper understanding.",
+  "robots": {
+    "index": false
+  },
+  "accessibility": {
+    "addBypassLinks": false,
+    "ignoreReducedMotion": false
+  }
+}
