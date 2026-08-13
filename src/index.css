@@ -22,13 +22,45 @@
 
 html {
   scroll-behavior: smooth;
+  background-color: #F7F6F2;
+  overflow-x: clip;
+  max-width: 100%;
 }
 
 body {
-  background-color: #F3EEE2;
+  background-color: #F7F6F2;
   color: #2e2d2a;
   font-family: 'Source Sans 3', sans-serif;
   -webkit-font-smoothing: antialiased;
+  max-width: 100%;
+  overflow-x: clip;
+}
+
+/* Fallback for browsers without `overflow: clip` (older Safari/Chrome). */
+@supports not (overflow: clip) {
+  html,
+  body {
+    overflow-x: hidden;
+  }
+}
+
+/* ─── Mobile viewport hardening ───
+   Applied only on narrow (phone) viewports. Keeps the layout flush with the
+   device width, stops pinch/double-tap zoom from widening the page, and lets
+   the cream surface fill the visible screen. Desktop is untouched: these
+   rules never fire there because the desktop layout never overflows. */
+@media (max-width: 767px) {
+  *,
+  *::before,
+  *::after {
+    touch-action: manipulation;
+  }
+
+  body {
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+    overflow-wrap: break-word;
+  }
 }
 
 /* Scrollbar */

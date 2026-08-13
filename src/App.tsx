@@ -9,27 +9,31 @@ import Button from '@/components/Button'
 import MadeFtk from '@/components/MadeFtk'
 import { OrnamentalDivider } from '@/components/SectionHeader'
 import { C, P, FONT_SERIF, FONT_SANS } from '@/theme'
+import { useRoute } from '@/lib/router'
 
 export default function App() {
-  const [activeNav, setActiveNav] = useState('Home')
-  const [studyView, setStudyView] = useState<'library' | 'isaiah'>('library')
+  const { route, navigate } = useRoute()
   const [showLogin, setShowLogin] = useState(false)
 
+  const activeNav = route.page === 'home' ? 'Home' : route.page === 'study' ? 'Study' : route.page === 'notes' ? 'Notes' : 'About'
+  const studyView = route.page === 'study' ? (route.view ?? 'library') : 'library'
+
   function handleNav(link: string) {
-    setActiveNav(link)
-    if (link === 'Study') setStudyView('library')
+    if (link === 'Home') navigate({ page: 'home' })
+    else if (link === 'Study') navigate({ page: 'study', view: 'library' })
+    else if (link === 'Notes') navigate({ page: 'notes' })
+    else navigate({ page: 'about' })
   }
 
   function handleStartStudy() {
-    setStudyView('isaiah')
-    setActiveNav('Study')
+    navigate({ page: 'study', view: 'isaiah' })
   }
 
   const isWideMain = activeNav === 'Home' || (activeNav === 'Study' && studyView === 'library')
   const isHome = activeNav === 'Home'
 
   return (
-    <div className="relative min-h-screen" style={{ color: C.ink, backgroundColor: C.bg }}>
+    <div className="relative min-h-dvh" style={{ color: C.ink, backgroundColor: C.bg }}>
       {!isHome && <SiteBackdrop />}
       {showLogin && <LoginModal onClose={() => setShowLogin(false)} />}
 
@@ -90,15 +94,22 @@ export default function App() {
         {activeNav === 'Study' && (
           <div className="relative">
             {studyView === 'library' ? (
-              <StudyLibrary onOpenIsaiah={() => setStudyView('isaiah')} />
+              <StudyLibrary onOpenIsaiah={() => navigate({ page: 'study', view: 'isaiah' })} />
             ) : (
               <>
                 <div className="mb-4">
-                  <Button size="sm" onClick={() => setStudyView('library')}>
+                  <Button size="sm" onClick={() => navigate({ page: 'study', view: 'library' })}>
                     ← study library
                   </Button>
                 </div>
-                <StudySection />
+                <StudySection
+                  part={route.part}
+                  week={route.week}
+                  chapter={route.chapter}
+                  version={route.version}
+                  onOpenLogin={() => setShowLogin(true)}
+                  onNavigate={navigate}
+                />
               </>
             )}
           </div>

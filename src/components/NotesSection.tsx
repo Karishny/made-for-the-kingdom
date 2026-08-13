@@ -1,7 +1,8 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useUser } from '@/context/UserContext'
 import SectionHeader from '@/components/SectionHeader'
 import Button from '@/components/Button'
+import { createNote, listNotes, removeNote, type StudyNote } from '@/lib/notesApi'
 
 const C = {
   bg: '#F7F6F2', ink: '#2e2d2a', terra: '#a85b31', terraDark: '#763f21',
@@ -12,34 +13,6 @@ const C = {
 const TAG_COLORS = [C.terra, C.olive, C.goldDeep, C.lavender, C.rose, C.mauve, '#454930', '#763f21']
 
 function tagColor(index: number) { return TAG_COLORS[index % TAG_COLORS.length] }
-
-export interface StudyNote {
-  id: string
-  authorId: string
-  authorName: string
-  authorColor: string
-  authorInitials: string
-  scripture: string
-  title: string
-  body: string
-  date: string
-  tag: string
-}
-
-function loadNotes(): StudyNote[] {
-  try {
-    const raw = localStorage.getItem('mftk_notes')
-    if (raw) {
-      const parsed: StudyNote[] = JSON.parse(raw)
-      return parsed.filter((n) => n.authorId !== 'seed')
-    }
-    return []
-  } catch { return [] }
-}
-
-function saveNotes(notes: StudyNote[]) {
-  localStorage.setItem('mftk_notes', JSON.stringify(notes))
-}
 
 function Avatar({ name, color, initials }: { name: string; color: string; initials: string }) {
   return (
@@ -55,40 +28,66 @@ function Avatar({ name, color, initials }: { name: string; color: string; initia
 
 export default function NotesSection({ onOpenLogin }: { onOpenLogin: () => void }) {
   const { user } = useUser()
-  const [notes, setNotes] = useState<StudyNote[]>(loadNotes)
+  const [notes, setNotes] = useState<StudyNote[]>([])
+  const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState(false)
+  const [saveError, setSaveError] = useState(false)
   const [drafting, setDrafting] = useState(false)
   const [draft, setDraft] = useState({ scripture: '', title: '', body: '', tag: '' })
   const [activeNote, setActiveNote] = useState<string | null>(null)
   const [filter, setFilter] = useState<string>('All')
 
+  useEffect(() => {
+    let cancelled = false
+    listNotes()
+      .then((list) => {
+        if (!cancelled) setNotes(list)
+      })
+      .catch(() => {
+        if (!cancelled) setLoadError(true)
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
   const authors = ['All', ...Array.from(new Set(notes.map((n) => n.authorName)))]
 
-  function saveNote() {
+  async function saveNote() {
     if (!user || (!draft.title.trim() && !draft.body.trim())) return
-    const newNote: StudyNote = {
-      id: Date.now().toString(),
-      authorId: user.id,
-      authorName: user.name,
-      authorColor: user.color,
-      authorInitials: user.initials,
-      scripture: draft.scripture || 'Isaiah',
-      title: draft.title || 'Untitled Note',
-      body: draft.body,
-      date: new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }),
-      tag: draft.tag || 'Study Note',
+    setSaveError(false)
+    try {
+      const created = await createNote({
+        authorId: user.id,
+        authorName: user.name,
+        authorColor: user.color,
+        authorInitials: user.initials,
+        study: 'Isaiah',
+        scripture: draft.scripture || 'Isaiah',
+        title: draft.title || 'Untitled Note',
+        body: draft.body,
+        date: new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }),
+        tag: draft.tag || 'Study Note',
+      })
+      setNotes([created, ...notes])
+      setDraft({ scripture: '', title: '', body: '', tag: '' })
+      setDrafting(false)
+    } catch {
+      setSaveError(true)
     }
-    const updated = [newNote, ...notes]
-    setNotes(updated)
-    saveNotes(updated)
-    setDraft({ scripture: '', title: '', body: '', tag: '' })
-    setDrafting(false)
   }
 
-  function deleteNote(id: string) {
-    const updated = notes.filter((n) => n.id !== id)
-    setNotes(updated)
-    saveNotes(updated)
-    if (activeNote === id) setActiveNote(null)
+  async function deleteNote(id: string) {
+    try {
+      await removeNote(id)
+      setNotes(notes.filter((n) => n.id !== id))
+      if (activeNote === id) setActiveNote(null)
+    } catch {
+      /* ignore */
+    }
   }
 
   const visible = filter === 'All' ? notes : notes.filter((n) => n.authorName === filter)
@@ -195,8 +194,13 @@ export default function NotesSection({ onOpenLogin }: { onOpenLogin: () => void 
               value={draft.body} onChange={(e) => setDraft({ ...draft, body: e.target.value })}
               className="w-full rounded-sm px-3 py-2 text-sm outline-none resize-none"
               style={{ fontFamily: "'Source Sans 3', sans-serif", lineHeight: '1.7', background: C.bg, border: `1px solid ${C.ink}25`, color: C.ink }} />
+            {saveError && (
+              <p className="text-xs" style={{ fontFamily: "'Source Sans 3', sans-serif", color: C.rose }}>
+                Could not save your note. Please try again.
+              </p>
+            )}
             <div className="flex justify-end">
-              <Button onClick={saveNote} variant="solid" size="sm">
+              <Button onClick={() => void saveNote()} variant="solid" size="sm">
                 save note
               </Button>
             </div>
@@ -205,6 +209,22 @@ export default function NotesSection({ onOpenLogin }: { onOpenLogin: () => void 
       )}
 
       {/* Notes list */}
+      {loading ? (
+        <div className="text-center py-16 rounded border"
+          style={{ borderColor: `${C.ink}15`, borderStyle: 'dashed' }}>
+          <p style={{ fontFamily: "'Fraunces', serif", fontStyle: 'italic', color: `${C.ink}55`, fontSize: '1rem' }}>
+            Loading shared notes…
+          </p>
+        </div>
+      ) : loadError ? (
+        <div className="text-center py-16 rounded border"
+          style={{ borderColor: `${C.ink}15`, borderStyle: 'dashed' }}>
+          <p style={{ fontFamily: "'Fraunces', serif", fontStyle: 'italic', color: `${C.ink}55`, fontSize: '1rem' }}>
+            Shared notes are currently unavailable.
+          </p>
+        </div>
+      ) : (
+        <>
       <div className="space-y-3">
         {visible.map((note, idx) => {
           const accent = tagColor(idx)
@@ -298,6 +318,8 @@ export default function NotesSection({ onOpenLogin }: { onOpenLogin: () => void 
             No notes yet. Begin studying and record your reflections.
           </p>
         </div>
+      )}
+        </>
       )}
     </section>
   )

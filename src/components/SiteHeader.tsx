@@ -45,6 +45,45 @@ function AuthArea({ onSignIn }: { onSignIn: () => void }) {
   )
 }
 
+// Mobile-only auth display for the drop-down menu: a small circular avatar
+// with just the user's first initial — no full name. The desktop AuthArea
+// above is intentionally untouched.
+function MobileAuthArea({ onSignIn }: { onSignIn: () => void }) {
+  const { user, logout } = useUser()
+  if (!user) {
+    return (
+      <div className="flex justify-end">
+        <Button
+          size="sm"
+          onClick={onSignIn}
+          style={{ background: '#454930', color: '#F7F6F2', border: '1px solid #454930' }}
+        >
+          sign in
+        </Button>
+      </div>
+    )
+  }
+  const initial = (user.name.trim()[0] ?? '?').toUpperCase()
+  return (
+    <div className="flex items-center justify-end gap-3">
+      <button
+        onClick={logout}
+        className="text-xs"
+        style={{ fontFamily: FONT_SANS, color: `${C.ink}44`, letterSpacing: '0.08em' }}
+      >
+        sign out
+      </button>
+      <span
+        className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold flex-shrink-0"
+        style={{ background: `${user.color}25`, color: user.color, border: `1.5px solid ${user.color}55`, fontFamily: FONT_SANS }}
+        aria-label={`signed in as ${user.name}`}
+      >
+        {initial}
+      </span>
+    </div>
+  )
+}
+
 export default function SiteHeader({
   activeNav,
   onNav,
@@ -122,13 +161,13 @@ export default function SiteHeader({
 
         {/* Mobile dropdown */}
         {menuOpen && (
-          <div className="md:hidden mt-4 pb-5 border-t" style={{ borderColor: `${C.goldDeep}22` }}>
-            <nav className="pt-4 flex flex-col items-stretch gap-1">
+          <div className="md:hidden mt-4 pb-6 border-t" style={{ borderColor: `${C.goldDeep}22` }}>
+            <nav className="pt-4 flex flex-col gap-0.5">
               {navLinks.map((link) => (
                 <button
                   key={link}
                   onClick={() => handleNav(link)}
-                  className="px-3 py-2.5 text-left transition-all duration-200"
+                  className="pr-1 pl-6 py-2.5 text-right transition-all duration-200"
                   style={{
                     fontFamily: FONT_SERIF,
                     fontWeight: activeNav === link ? 400 : 300,
@@ -142,9 +181,8 @@ export default function SiteHeader({
                 </button>
               ))}
             </nav>
-            <div className="pt-5 flex justify-center">
-              <AuthArea onSignIn={onSignIn} />
-            </div>
+            <div className="h-px my-4" style={{ background: `${C.goldDeep}1a` }} />
+            <MobileAuthArea onSignIn={onSignIn} />
           </div>
         )}
       </div>

@@ -9,13 +9,17 @@ import {
   getStudyPart,
   getStudyWeek,
   weekStatus,
+  isWeekComplete,
   breakAfterWeeks,
   type StudyWeek,
   type ResourceType,
+  type CompletedResources,
 } from '@/data/studyWeeks'
 import Button from '@/components/Button'
 import { useUser } from '@/context/UserContext'
-import { loadProgress, saveProgress, loadChapters, saveChapters } from '@/lib/storage'
+import { loadProgress, saveProgress, loadChapters, saveChapters, loadResources, saveResources } from '@/lib/storage'
+import { createNote, listNotes, type StudyNote } from '@/lib/notesApi'
+import type { AppRoute } from '@/lib/router'
 
 const C = {
   bg: '#F7F6F2', ink: '#2e2d2a', terra: '#a85b31', terraDark: '#763f21',
@@ -55,21 +59,37 @@ function CornerMark({ className }: { className?: string }) {
   )
 }
 
-function VersionToggle({ version, onChange }: { version: BibleVersion; onChange: (v: BibleVersion) => void }) {
+function VersionToggle({ version, onChange, esvHref }: { version: BibleVersion; onChange: (v: BibleVersion) => void; esvHref?: string }) {
   return (
     <div className="inline-flex rounded-sm overflow-hidden border" style={{ borderColor: `${C.terra}35` }}>
-      {VERSIONS.map((v) => (
-        <button key={v} onClick={() => onChange(v)}
-          className="px-3 py-1.5 text-xs transition-all duration-150"
-          style={{
-            fontFamily: "'Source Sans 3', sans-serif", fontWeight: v === version ? 600 : 400,
-            letterSpacing: '0.08em', color: v === version ? C.bg : `${C.ink}88`,
-            background: v === version ? C.terra : 'transparent',
-            borderRight: v !== 'NIV' ? `1px solid ${C.terra}30` : undefined,
-          }}>
-          {v}
-        </button>
-      ))}
+      {VERSIONS.map((v) => {
+        const active = v === version
+        const style = {
+          fontFamily: "'Source Sans 3', sans-serif", fontWeight: active ? 600 : 400,
+          letterSpacing: '0.08em', color: active ? C.bg : `${C.ink}88`,
+          background: active ? C.terra : 'transparent',
+          borderRight: v !== 'NIV' ? `1px solid ${C.terra}30` : undefined,
+        }
+        if (v === 'ESV' && esvHref) {
+          return (
+            <a key={v} href={esvHref} target="_blank" rel="noopener noreferrer"
+              className="px-3 py-1.5 text-xs transition-all duration-150 inline-flex items-center gap-1"
+              style={{ ...style, textDecoration: 'none', cursor: 'pointer' }}>
+              {v}
+              <svg width="8" height="8" viewBox="0 0 8 8" fill="none" style={{ opacity: 0.7 }}>
+                <path d="M2 6 L6 2 M2.5 2 H6 V5.5" stroke="currentColor" strokeWidth="1" strokeLinecap="round" />
+              </svg>
+            </a>
+          )
+        }
+        return (
+          <button key={v} onClick={() => onChange(v)}
+            className="px-3 py-1.5 text-xs transition-all duration-150"
+            style={style}>
+            {v}
+          </button>
+        )
+      })}
     </div>
   )
 }
@@ -278,41 +298,98 @@ function ProgressTracker({
   )
 }
 
+// Horizontal row of week tiles used on the part overview and inside a week.
+// Scrolls sideways on mobile; wraps into rows on desktop. Shows break
+// separators between week groups and a subtle status on each tile.
+function WeekStrip({
+  part,
+  activeWeek,
+  completedWeeks,
+  completedChapters,
+  completedResources,
+  onSelect,
+}: {
+  part: 1 | 2 | 3
+  activeWeek: number | null
+  completedWeeks: Set<string>
+  completedChapters: Set<number>
+  completedResources: CompletedResources
+  onSelect: (weekNumber: number) => void
+}) {
+  const currentPart = getStudyPart(part)
+  const breaks = breakAfterWeeks(part)
+
+  return (
+    <div className="overflow-x-auto -mx-1 px-1" style={{ WebkitOverflowScrolling: 'touch', scrollbarWidth: 'none' }}>
+      <div className="flex items-center gap-2.5 md:flex-wrap w-max md:w-full">
+        {currentPart.weeks.map((week) => {
+          const status = weekStatus(completedWeeks, completedChapters, part, week.number)
+          const active = activeWeek === week.number
+          const complete = status === 'complete'
+          return (
+            <Fragment key={week.number}>
+              {breaks.has(week.number) && (
+                <div className="flex-shrink-0 flex items-center gap-2 px-1.5">
+                  <div className="h-px w-5" style={{ background: `${C.ink}22` }} />
+                  <span className="text-[9px] tracking-[0.3em] uppercase"
+                    style={{ fontFamily: "'Source Sans 3', sans-serif", color: `${C.ink}44`, fontWeight: 600 }}>
+                    break
+                  </span>
+                  <div className="h-px w-5" style={{ background: `${C.ink}22` }} />
+                </div>
+              )}
+              <button
+                onClick={() => onSelect(week.number)}
+                aria-current={active ? 'step' : undefined}
+                className="flex-shrink-0 flex flex-col items-center justify-center rounded border px-4 py-2.5 transition-all duration-200 hover:-translate-y-0.5"
+                style={{
+                  minWidth: 104,
+                  borderColor: active ? currentPart.color : `${currentPart.color}35`,
+                  background: active ? `${currentPart.color}20` : complete ? `${currentPart.color}10` : `${currentPart.color}05`,
+                }}>
+                <span style={{
+                  fontFamily: "'Fraunces', serif", fontSize: '1.05rem', fontWeight: 500, lineHeight: 1.2,
+                  color: active ? currentPart.color : complete ? currentPart.color : C.ink,
+                }}>
+                  {complete && <span style={{ marginRight: 4 }}>✓</span>}
+                  {week.number}
+                </span>
+                <span className="text-[9px] tracking-[0.14em] uppercase mt-0.5"
+                  style={{ fontFamily: "'Source Sans 3', sans-serif", color: `${C.ink}55` }}>
+                  {status === 'in-progress' ? 'in progress' : `Isaiah ${week.chapterStart}–${week.chapterEnd}`}
+                </span>
+              </button>
+            </Fragment>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
 function PartOverview({
   part,
   completedWeeks,
   completedChapters,
+  completedResources,
   onBack,
   onWeekClick,
 }: {
   part: 1 | 2 | 3
   completedWeeks: Set<string>
   completedChapters: Set<number>
+  completedResources: CompletedResources
   onBack: () => void
   onWeekClick: (weekNumber: number) => void
 }) {
   const currentPart = getStudyPart(part)
   const done = currentPart.weeks.filter((w) => completedWeeks.has(weekKey(part, w.number))).length
-  const [weeksOpen, setWeeksOpen] = useState(true)
-  const breaks = breakAfterWeeks(part)
 
   return (
     <section className="mb-14">
       <div className="rounded border overflow-hidden" style={{ borderColor: `${currentPart.color}40` }}>
         <div className="p-6 flex items-center gap-3 flex-wrap"
           style={{ background: `${currentPart.color}10`, borderBottom: `1px solid ${currentPart.color}25` }}>
-          <button
-            onClick={() => setWeeksOpen((v) => !v)}
-      className="flex-shrink-0 flex items-center justify-center rounded-full transition-all duration-150 hover:-translate-y-px"
-            style={{ width: 34, height: 34, border: `1px solid ${currentPart.color}45`, background: `${currentPart.color}10`, color: currentPart.color }}
-            aria-expanded={weeksOpen}
-            aria-label={weeksOpen ? 'Collapse weekly sessions' : 'Expand weekly sessions'}
-            title={weeksOpen ? 'Collapse weekly sessions' : 'Expand weekly sessions'}>
-            <svg width="15" height="15" viewBox="0 0 16 16" fill="none"
-              style={{ transform: weeksOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s ease' }}>
-              <path d="M3 6 L8 11 L13 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" fill="none" />
-            </svg>
-          </button>
           <Button size="sm" tone={currentPart.color} onClick={onBack}>
             ← all parts
           </Button>
@@ -331,60 +408,27 @@ function PartOverview({
         </div>
 
         <div className="px-6 py-6">
-          {weeksOpen ? (
-            <>
-              <p className="text-xs mb-4" style={{ fontFamily: "'Source Sans 3', sans-serif", color: `${C.ink}55`, letterSpacing: '0.1em' }}>
-                Weekly study sessions
-              </p>
-              <div className="space-y-2.5">
-                {currentPart.weeks.map((week) => {
-                  const status = weekStatus(completedWeeks, completedChapters, part, week.number)
-                  return (
-                    <Fragment key={week.number}>
-                      <button onClick={() => onWeekClick(week.number)}
-                        className="w-full flex items-center gap-4 rounded border px-4 py-3 text-left transition-all duration-200 hover:-translate-y-0.5"
-                        style={{ borderColor: `${currentPart.color}35`, background: status === 'complete' ? `${currentPart.color}12` : `${currentPart.color}06` }}>
-                        <span className="flex-shrink-0 w-11 text-center"
-                          style={{ fontFamily: "'Fraunces', serif", color: currentPart.color, fontSize: '1.1rem', fontWeight: 500 }}>
-                          {week.number}
-                        </span>
-                        <span className="flex-1 min-w-0">
-                          <span className="block"
-                            style={{ color: currentPart.color, fontFamily: "'Fraunces', serif", fontSize: '1.05rem', fontWeight: 400, lineHeight: 1.3, letterSpacing: '-0.01em' }}>
-                            Week {week.number}
-                          </span>
-                          <span className="block text-xs mt-0.5"
-                            style={{ fontFamily: "'Source Sans 3', sans-serif", color: `${C.ink}77` }}>
-                            {week.day} · Isaiah {week.chapterStart}–{week.chapterEnd}
-                          </span>
-                        </span>
-                        <StatusChip status={status} color={currentPart.color} />
-                        <span className="text-xs flex-shrink-0"
-                          style={{ color: currentPart.color, fontFamily: "'Source Sans 3', sans-serif", fontWeight: 600 }}>
-                          →
-                        </span>
-                      </button>
-                      {breaks.has(week.number) && <BreakDivider />}
-                    </Fragment>
-                  )
-                })}
-              </div>
-              <p className="text-xs mt-5 italic" style={{ fontFamily: "'Fraunces', serif", color: `${C.ink}44` }}>
-                Select a weekly session to begin. Each week is one Thursday gathering.
-              </p>
-            </>
-          ) : (
-            <p className="text-xs italic" style={{ fontFamily: "'Fraunces', serif", color: `${C.ink}55` }}>
-              {currentPart.weeks.length} weekly sessions are collapsed — click the arrow to expand.
-            </p>
-          )}
+          <p className="text-xs mb-4" style={{ fontFamily: "'Source Sans 3', sans-serif", color: `${C.ink}55`, letterSpacing: '0.1em' }}>
+            Weekly study sessions
+          </p>
+          <WeekStrip
+            part={part}
+            activeWeek={null}
+            completedWeeks={completedWeeks}
+            completedChapters={completedChapters}
+            completedResources={completedResources}
+            onSelect={onWeekClick}
+          />
+          <p className="text-xs mt-5 italic" style={{ fontFamily: "'Fraunces', serif", color: `${C.ink}44` }}>
+            Select a weekly session to open its study resources. Each week is one Thursday gathering.
+          </p>
         </div>
       </div>
     </section>
   )
 }
 
-function ResourceCard({ resource, color }: { resource: StudyWeek['resources'][number]; color: string }) {
+function ResourceCard({ resource, color, done, onToggle }: { resource: StudyWeek['resources'][number]; color: string; done: boolean; onToggle: () => void }) {
   const body = (
     <>
       <div className="flex items-start justify-between gap-3 mb-3">
@@ -392,15 +436,18 @@ function ResourceCard({ resource, color }: { resource: StudyWeek['resources'][nu
           style={{ background: `${color}16`, border: `1px solid ${color}30` }}>
           <ResourceIcon type={resource.type} color={color} />
         </div>
-        <span className="text-[10px] tracking-[0.14em] uppercase px-2 py-0.5 rounded-sm"
-          style={{
-            fontFamily: "'Source Sans 3', sans-serif", fontWeight: 600,
-            color: resource.url ? color : `${C.ink}55`,
-            background: resource.url ? `${color}10` : `${C.ink}08`,
-            border: `1px solid ${resource.url ? `${color}35` : `${C.ink}18`}`,
-          }}>
-          {resource.url ? 'Watch now' : 'Coming soon'}
-        </span>
+        <div className="flex items-center gap-2">
+          <span className="text-[10px] tracking-[0.14em] uppercase px-2 py-0.5 rounded-sm"
+            style={{
+              fontFamily: "'Source Sans 3', sans-serif", fontWeight: 600,
+              color: done ? C.bg : (resource.url ? color : `${C.ink}55`),
+              background: done ? color : (resource.url ? `${color}10` : `${C.ink}08`),
+              border: `1px solid ${done ? color : (resource.url ? `${color}35` : `${C.ink}18`)}`,
+            }}>
+            {done ? 'Done' : (resource.url ? 'Watch now' : 'Coming soon')}
+          </span>
+          <CompleteToggle done={done} color={color} onToggle={onToggle} circle />
+        </div>
       </div>
       <p className="text-xs tracking-[0.18em] uppercase mb-1"
         style={{ color: color, fontFamily: "'Source Sans 3', sans-serif", fontWeight: 600 }}>
@@ -415,35 +462,36 @@ function ResourceCard({ resource, color }: { resource: StudyWeek['resources'][nu
     return (
       <a href={resource.url} target="_blank" rel="noopener noreferrer"
         className="block rounded border p-5 transition-all duration-200 hover:-translate-y-0.5"
-        style={{ borderColor: `${color}30`, background: `${color}05`, opacity: 0.92 }}>
+        style={{ borderColor: `${color}30`, background: done ? `${color}12` : `${color}05`, opacity: 0.95 }}>
         {body}
       </a>
     )
   }
   return (
     <div className="rounded border p-5"
-      style={{ borderColor: `${color}30`, background: `${color}05`, opacity: 0.92 }}>
+      style={{ borderColor: `${color}30`, background: done ? `${color}12` : `${color}05`, opacity: 0.95 }}>
       {body}
     </div>
   )
 }
 
-function CompleteToggle({ done, color, onToggle }: { done: boolean; color: string; onToggle: () => void }) {
+function CompleteToggle({ done, color, onToggle, circle = false }: { done: boolean; color: string; onToggle: () => void; circle?: boolean }) {
   return (
     <button
       onClick={onToggle}
       aria-pressed={done}
       aria-label={done ? 'Mark as not complete' : 'Mark as complete'}
       title={done ? 'Mark as not complete' : 'Mark as complete'}
-      className="flex-shrink-0 flex items-center justify-center rounded-sm transition-all duration-150 hover:-translate-y-px"
+      className="flex-shrink-0 flex items-center justify-center transition-all duration-150 hover:-translate-y-px"
       style={{
-        width: 34,
-        height: 34,
+        width: circle ? 28 : 34,
+        height: circle ? 28 : 34,
+        borderRadius: circle ? '50%' : '4px',
         border: `1px solid ${done ? color : `${C.ink}30`}`,
         background: done ? color : 'transparent',
         color: done ? C.bg : 'transparent',
       }}>
-      <svg width="15" height="15" viewBox="0 0 16 16" fill="none"
+      <svg width={circle ? 13 : 15} height={circle ? 13 : 15} viewBox="0 0 16 16" fill="none"
         style={{ opacity: done ? 1 : 0, transition: 'opacity 0.15s ease' }}>
         <path d="M3 8.5 L6.2 11.7 L13 4.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" fill="none" />
       </svg>
@@ -456,23 +504,36 @@ function WeekView({
   weekNumber,
   completedWeeks,
   completedChapters,
+  completedResources,
   onBack,
   onChapter,
-  onToggleCompleteWeek,
+  onToggleResource,
   onToggleCompleteChapter,
+  onPrevWeek,
+  onNextWeek,
+  onSelectWeek,
 }: {
   part: 1 | 2 | 3
   weekNumber: number
   completedWeeks: Set<string>
   completedChapters: Set<number>
+  completedResources: CompletedResources
   onBack: () => void
   onChapter: (n: number) => void
-  onToggleCompleteWeek: () => void
+  onToggleResource: (type: ResourceType) => void
   onToggleCompleteChapter: (n: number) => void
+  onPrevWeek: () => void
+  onNextWeek: () => void
+  onSelectWeek: (weekNumber: number) => void
 }) {
   const currentPart = getStudyPart(part)
   const week: StudyWeek = getStudyWeek(part, weekNumber)
-  const isComplete = completedWeeks.has(weekKey(part, weekNumber))
+  const partWeeks = currentPart.weeks
+  const firstWeek = partWeeks[0].number
+  const lastWeek = partWeeks[partWeeks.length - 1].number
+  const status = weekStatus(completedWeeks, completedChapters, part, weekNumber)
+  const isComplete = status === 'complete'
+  const doneResources = completedResources[weekKey(part, weekNumber)] ?? []
 
   return (
     <section className="mb-14">
@@ -489,16 +550,72 @@ function WeekView({
               Week {week.number} · {week.day} Session
             </p>
             <h3 style={{ fontFamily: "'Fraunces', serif", fontSize: '1.5rem', fontWeight: 300, color: C.ink, lineHeight: 1.2 }}>
-              Chapters <span style={{ color: currentPart.color, fontStyle: 'italic' }}>{week.chapterStart}–{week.chapterEnd}</span>
+              Week <span style={{ color: currentPart.color, fontStyle: 'italic' }}>{week.number}</span>
+              <span style={{ fontSize: '1.05rem', color: `${C.ink}66` }}> — Isaiah {week.chapterStart}–{week.chapterEnd}</span>
             </h3>
             <p className="text-xs mt-1 italic" style={{ fontFamily: "'Fraunces', serif", color: `${C.ink}66` }}>
               Part {currentPart.part} — {currentPart.label}
             </p>
           </div>
-          <StatusChip status={isComplete ? 'complete' : 'not-started'} color={currentPart.color} />
+          <StatusChip status={status} color={currentPart.color} />
         </div>
 
-        {/* Chapters in this week */}
+        {/* Week selector + previous / next */}
+        <div className="px-6 py-4 flex items-center gap-3"
+          style={{ borderBottom: `1px solid ${currentPart.color}18` }}>
+          <button
+            onClick={onPrevWeek}
+            disabled={weekNumber <= firstWeek}
+            aria-label="Previous week"
+            className="flex-shrink-0 flex items-center justify-center rounded-full transition-all duration-150 disabled:opacity-20 hover:-translate-y-px"
+            style={{ width: 30, height: 30, border: `1px solid ${currentPart.color}40`, color: currentPart.color, background: `${currentPart.color}08` }}>
+            <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M10 3 L5 8 L10 13" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" /></svg>
+          </button>
+          <div className="flex-1 min-w-0">
+            <WeekStrip
+              part={part}
+              activeWeek={weekNumber}
+              completedWeeks={completedWeeks}
+              completedChapters={completedChapters}
+              completedResources={completedResources}
+              onSelect={onSelectWeek}
+            />
+          </div>
+          <button
+            onClick={onNextWeek}
+            disabled={weekNumber >= lastWeek}
+            aria-label="Next week"
+            className="flex-shrink-0 flex items-center justify-center rounded-full transition-all duration-150 disabled:opacity-20 hover:-translate-y-px"
+            style={{ width: 30, height: 30, border: `1px solid ${currentPart.color}40`, color: currentPart.color, background: `${currentPart.color}08` }}>
+            <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M6 3 L11 8 L6 13" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" /></svg>
+          </button>
+        </div>
+
+        {/* Weekly Resources — primary */}
+        <div className="px-6 py-6" style={{ borderBottom: `1px solid ${currentPart.color}18` }}>
+          <div className="flex items-baseline gap-4 mb-4">
+            <h4 style={{ fontFamily: "'Fraunces', serif", fontSize: '1.1rem', fontWeight: 400, color: C.ink }}>
+              Weekly Resources
+            </h4>
+            <div className="flex-1 h-px" style={{ background: `${C.ink}15` }} />
+            <span className="text-xs italic" style={{ fontFamily: "'Fraunces', serif", color: `${C.ink}55` }}>
+              Complete any one to mark this week complete
+            </span>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {week.resources.map((r) => (
+              <ResourceCard
+                key={r.type}
+                resource={r}
+                color={currentPart.color}
+                done={doneResources.includes(r.type)}
+                onToggle={() => onToggleResource(r.type)}
+              />
+            ))}
+          </div>
+        </div>
+
+        {/* Read the Chapters — secondary */}
         <div className="px-6 py-6" style={{ borderBottom: `1px solid ${currentPart.color}18` }}>
           <div className="flex items-baseline gap-4 mb-4">
             <h4 style={{ fontFamily: "'Fraunces', serif", fontSize: '1.05rem', fontWeight: 400, color: C.ink }}>
@@ -506,7 +623,7 @@ function WeekView({
             </h4>
             <div className="flex-1 h-px" style={{ background: `${C.ink}15` }} />
             <span className="text-xs italic" style={{ fontFamily: "'Fraunces', serif", color: `${C.ink}55` }}>
-              {week.chapterNumbers.length} chapters · Thursday reading
+              {week.chapterNumbers.length} chapters · optional
             </span>
           </div>
           <div className="space-y-2.5">
@@ -544,57 +661,25 @@ function WeekView({
           </div>
         </div>
 
-        {/* Resources */}
-        <div className="px-6 py-6" style={{ borderBottom: `1px solid ${currentPart.color}18` }}>
-          <div className="flex items-baseline gap-4 mb-4">
-            <h4 style={{ fontFamily: "'Fraunces', serif", fontSize: '1.05rem', fontWeight: 400, color: C.ink }}>
-              Weekly Resources
-            </h4>
-            <div className="flex-1 h-px" style={{ background: `${C.ink}15` }} />
-            <span className="text-xs italic" style={{ fontFamily: "'Fraunces', serif", color: `${C.ink}55` }}>
-              Choose one to go deeper
-            </span>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {week.resources.map((r) => (
-              <ResourceCard key={r.type} resource={r} color={currentPart.color} />
-            ))}
-          </div>
-        </div>
-
-        {/* Weekly completion */}
+        {/* Weekly progress — subtle */}
         <div className="px-6 py-6">
-          <div className="relative rounded border p-6 text-center"
-            style={{ borderColor: isComplete ? `${currentPart.color}45` : `${C.terra}35`, background: isComplete ? `${currentPart.color}0d` : `${C.terra}07` }}>
-            {!isComplete && <CornerMark className="absolute top-0 left-0" />}
-            {!isComplete && <CornerMark className="absolute top-0 right-0 rotate-90" />}
-            {!isComplete && <CornerMark className="absolute bottom-0 left-0 -rotate-90" />}
-            {!isComplete && <CornerMark className="absolute bottom-0 right-0 rotate-180" />}
-            <p className="text-xs tracking-[0.3em] uppercase mb-2"
-              style={{ color: isComplete ? currentPart.color : C.terra, fontFamily: "'Source Sans 3', sans-serif", fontWeight: 500 }}>
-              Weekly Study Progress
-            </p>
+          <div className="rounded border px-6 py-4 text-center"
+            style={{ borderColor: isComplete ? `${currentPart.color}40` : `${C.ink}18`, background: isComplete ? `${currentPart.color}0d` : 'transparent' }}>
             {isComplete ? (
               <>
-                <p style={{ fontFamily: "'Fraunces', serif", fontSize: '1.25rem', fontWeight: 400, color: C.ink }}>
-                  <span style={{ color: currentPart.color }}>✓</span> Week {week.number} Complete
+                <p style={{ fontFamily: "'Fraunces', serif", fontSize: '1.1rem', fontWeight: 400, color: C.ink }}>
+                  <span style={{ color: currentPart.color }}>✓</span> Week {week.number} complete
                 </p>
-                <p className="text-xs mt-2 italic" style={{ fontFamily: "'Fraunces', serif", color: `${C.ink}66` }}>
-                  Part {currentPart.part} progress has been updated.
+                <p className="text-xs mt-1.5 italic" style={{ fontFamily: "'Fraunces', serif", color: `${C.ink}66` }}>
+                  {doneResources.length > 0
+                    ? `${doneResources.length} ${doneResources.length === 1 ? 'resource' : 'resources'} complete · Part ${currentPart.part} progress updated.`
+                    : `Part ${currentPart.part} progress updated.`}
                 </p>
-                <Button size="sm" onClick={onToggleCompleteWeek} className="mt-5">
-                  undo completion
-                </Button>
               </>
             ) : (
-              <>
-                <p className="text-sm italic" style={{ fontFamily: "'Lora', serif", color: `${C.ink}88` }}>
-                  "Complete at least one resource to mark this week's study as complete."
-                </p>
-                <Button variant="solid" onClick={onToggleCompleteWeek} className="mt-5">
-                  ✓ i've completed this week's study
-                </Button>
-              </>
+              <p className="text-sm italic" style={{ fontFamily: "'Lora', serif", color: `${C.ink}77` }}>
+                Complete any one resource above to mark this week's study as complete.
+              </p>
             )}
           </div>
         </div>
@@ -607,28 +692,51 @@ function ChapterView({
   part,
   weekNumber,
   chapterNumber,
+  version,
   onBack,
   onPrevChapter,
   onNextChapter,
   completedChapters,
   onToggleComplete,
+  onOpenLogin,
+  onVersionChange,
 }: {
   part: 1 | 2 | 3
   weekNumber: number
   chapterNumber: number
+  version: BibleVersion
   onBack: () => void
   onPrevChapter: () => void
   onNextChapter: () => void
   completedChapters: Set<number>
   onToggleComplete: (n: number) => void
+  onOpenLogin?: () => void
+  onVersionChange: (v: BibleVersion) => void
 }) {
-  const [version, setVersion] = useState<BibleVersion>('KJV')
+  const { user } = useUser()
   const [nkjvContent, setNkjvContent] = useState<string | null>(null)
+  const [chapterNotes, setChapterNotes] = useState<StudyNote[]>([])
+  const [noteOpen, setNoteOpen] = useState(false)
+  const [noteTitle, setNoteTitle] = useState('')
+  const [noteBody, setNoteBody] = useState('')
+  const [noteError, setNoteError] = useState(false)
   const currentPart = PARTS.find((p) => p.part === part)!
   const partChapters = ISAIAH_CHAPTERS.filter((c) => c.part === part)
   const partFirst = PART_FIRST[part]
   const partLast = partChapters[partChapters.length - 1].number
   const chapterData = ISAIAH_CHAPTERS.find((c) => c.number === chapterNumber)!
+
+  useEffect(() => {
+    let cancelled = false
+    listNotes()
+      .then((list) => {
+        if (!cancelled) setChapterNotes(list.filter((n) => n.chapter === chapterNumber))
+      })
+      .catch(() => {})
+    return () => {
+      cancelled = true
+    }
+  }, [chapterNumber])
 
   useEffect(() => {
     let cancelled = false
@@ -648,9 +756,40 @@ function ChapterView({
     ? KJV_ISAIAH[chapterNumber]
     : version === 'NKJV'
       ? nkjvContent
-      : chapterData.content[version]
+      : version === 'ESV'
+        ? null
+        : chapterData.content[version]
   const hasContent = !!content
   const isComplete = completedChapters.has(chapterNumber)
+  const esvHref = `https://www.esv.org/Isaiah%20${chapterNumber}/`
+
+  async function submitChapterNote() {
+    if (!user || !noteBody.trim()) return
+    setNoteError(false)
+    try {
+      const created = await createNote({
+        authorId: user.id,
+        authorName: user.name,
+        authorColor: user.color,
+        authorInitials: user.initials,
+        study: 'Isaiah',
+        part,
+        week: weekNumber,
+        chapter: chapterNumber,
+        scripture: `Isaiah ${chapterNumber}`,
+        title: noteTitle.trim() || 'Untitled Note',
+        body: noteBody.trim(),
+        date: new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }),
+        tag: 'Study Note',
+      })
+      setChapterNotes((prev) => [created, ...prev])
+      setNoteTitle('')
+      setNoteBody('')
+      setNoteOpen(false)
+    } catch {
+      setNoteError(true)
+    }
+  }
 
   return (
     <section className="mb-14">
@@ -661,7 +800,7 @@ function ChapterView({
           <Button size="sm" tone={currentPart.color} onClick={onBack}>
             ← week {weekNumber}
           </Button>
-          <VersionToggle version={version} onChange={setVersion} />
+          <VersionToggle version={version} onChange={onVersionChange} esvHref={esvHref} />
         </div>
 
         {/* Chapter title bar */}
@@ -716,14 +855,106 @@ function ChapterView({
             <div className="flex flex-col items-center justify-center py-12 rounded border"
               style={{ borderColor: `${C.ink}15`, borderStyle: 'dashed' }}>
               <p style={{ fontFamily: "'Fraunces', serif", fontStyle: 'italic', color: `${C.ink}55`, fontSize: '1rem' }}>
-                {version === 'NKJV' ? 'NKJV requires a licensed source.' : `${version} translation coming soon.`}
+                {version === 'NKJV' ? 'NKJV requires a licensed source.' : version === 'ESV' ? 'Read this chapter on the official ESV website.' : `${version} translation coming soon.`}
               </p>
               <p className="text-xs mt-2" style={{ fontFamily: "'Source Sans 3', sans-serif", color: `${C.ink}44` }}>
                 {version === 'NKJV'
                   ? 'Complete NKJV text will appear here once a licensed source is connected.'
-                  : 'This translation will be added here.'}
+                  : version === 'ESV'
+                    ? `Open ${esvHref} to read Isaiah ${chapterNumber}.`
+                    : 'This translation will be added here.'}
               </p>
             </div>
+          )}
+        </div>
+
+        {/* Community notes for this chapter */}
+        <div className="px-6 py-6" style={{ borderTop: `1px solid ${currentPart.color}20` }}>
+          <div className="flex items-center justify-between gap-3 mb-4 flex-wrap">
+            <div>
+              <p className="text-xs tracking-[0.3em] uppercase mb-1"
+                style={{ color: C.olive, fontFamily: "'Source Sans 3', sans-serif", fontWeight: 500 }}>
+                community notes
+              </p>
+              <h4 style={{ fontFamily: "'Fraunces', serif", fontSize: '1.05rem', fontWeight: 400, color: C.ink }}>
+                shared by the group on <span style={{ color: currentPart.color, fontStyle: 'italic' }}>Isaiah {chapterNumber}</span>
+              </h4>
+            </div>
+            {user ? (
+              <Button size="sm" tone={currentPart.color} onClick={() => setNoteOpen((o) => !o)}>
+                {noteOpen ? 'cancel' : '+ add note'}
+              </Button>
+            ) : (
+              <Button size="sm" tone={currentPart.color} onClick={() => onOpenLogin?.()}>
+                log in to add a note
+              </Button>
+            )}
+          </div>
+
+          {noteOpen && user && (
+            <div className="rounded border mb-4 overflow-hidden"
+              style={{ borderColor: `${currentPart.color}40`, background: `${currentPart.color}06` }}>
+              <div className="p-4 space-y-3">
+                <input type="text" placeholder="Note title (optional)"
+                  value={noteTitle} onChange={(e) => setNoteTitle(e.target.value)}
+                  className="w-full rounded-sm px-3 py-2 text-sm outline-none"
+                  style={{ fontFamily: "'Source Sans 3', sans-serif", background: C.bg, border: `1px solid ${C.ink}25`, color: C.ink }} />
+                <textarea rows={3} placeholder="What did you notice in this passage?"
+                  value={noteBody} onChange={(e) => setNoteBody(e.target.value)}
+                  className="w-full rounded-sm px-3 py-2 text-sm outline-none resize-none"
+                  style={{ fontFamily: "'Source Sans 3', sans-serif", lineHeight: '1.7', background: C.bg, border: `1px solid ${C.ink}25`, color: C.ink }} />
+                {noteError && (
+                  <p className="text-xs" style={{ fontFamily: "'Source Sans 3', sans-serif", color: C.rose }}>
+                    Could not save your note. Please try again.
+                  </p>
+                )}
+                <div className="flex justify-end">
+                  <Button size="sm" variant="solid" tone={currentPart.color} onClick={() => void submitChapterNote()}>
+                    save note
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {chapterNotes.length > 0 ? (
+            <div className="space-y-2">
+              {chapterNotes.map((n) => (
+                <div key={n.id} className="rounded border px-4 py-3"
+                  style={{ borderColor: `${n.authorColor}30`, background: `${n.authorColor}05` }}>
+                  <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+                    <span className="text-xs font-semibold"
+                      style={{ color: n.authorColor, fontFamily: "'Source Sans 3', sans-serif" }}>
+                      {n.authorName}
+                    </span>
+                    {n.authorId === user?.id && (
+                      <span className="text-[10px] tracking-[0.14em] uppercase px-1.5 py-0.5 rounded-sm"
+                        style={{ color: '#fff', background: n.authorColor, fontFamily: "'Source Sans 3', sans-serif", fontWeight: 600 }}>
+                        you
+                      </span>
+                    )}
+                    <span className="text-xs" style={{ color: `${C.ink}44`, fontFamily: "'Source Sans 3', sans-serif" }}>·</span>
+                    <span className="text-xs" style={{ color: `${C.ink}44`, fontFamily: "'Source Sans 3', sans-serif" }}>
+                      {n.date}
+                    </span>
+                  </div>
+                  {n.title !== 'Untitled Note' && (
+                    <p className="text-sm mb-0.5" style={{ fontFamily: "'Fraunces', serif", color: C.ink }}>
+                      {n.title}
+                    </p>
+                  )}
+                  <p className="text-sm leading-relaxed"
+                    style={{ fontFamily: "'Source Sans 3', sans-serif", color: `${C.ink}88`, lineHeight: '1.7' }}>
+                    {n.body}
+                  </p>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm italic"
+              style={{ fontFamily: "'Fraunces', serif", color: `${C.ink}55` }}>
+              No shared notes on this chapter yet. Be the first to add one.
+            </p>
           )}
         </div>
 
@@ -882,60 +1113,94 @@ function WhereYouLeftOff({
   )
 }
 
-export default function StudySection() {
+export default function StudySection({
+  part,
+  week,
+  chapter,
+  version,
+  onOpenLogin,
+  onNavigate,
+}: {
+  part?: number
+  week?: number
+  chapter?: number
+  version?: BibleVersion
+  onOpenLogin?: () => void
+  onNavigate: (route: AppRoute) => void
+}) {
   const { user } = useUser()
   const userId = user?.id ?? 'guest'
-  const [openPart, setOpenPart] = useState<1 | 2 | 3 | null>(null)
-  const [openWeek, setOpenWeek] = useState<number | null>(null)
-  const [openChapter, setOpenChapter] = useState<number | null>(null)
   const [completedChapters, setCompletedChapters] = useState<Set<number>>(() => loadChapters(userId))
   const [completedWeeks, setCompletedWeeks] = useState<Set<string>>(() => loadProgress(userId))
+  const [completedResources, setCompletedResources] = useState<CompletedResources>(() => loadResources(userId) as CompletedResources)
 
   useEffect(() => {
     setCompletedWeeks(loadProgress(userId))
     setCompletedChapters(loadChapters(userId))
+    setCompletedResources(loadResources(userId) as CompletedResources)
   }, [userId])
 
+  // The current location comes from the URL. Sanitize it against the real study
+  // data so direct links or stale URLs never render an out-of-range week/chapter.
+  const chapterInfo = chapter !== undefined ? ISAIAH_CHAPTERS.find((c) => c.number === chapter) : undefined
+  const openChapter: number | null = chapterInfo ? chapterInfo.number : null
+
+  let openPart: 1 | 2 | 3 | null = null
+  if (openChapter !== null) {
+    openPart = chapterInfo!.part
+  } else if (part !== undefined && part >= 1 && part <= 3) {
+    openPart = part as 1 | 2 | 3
+  }
+
+  let openWeek: number | null = null
+  if (openPart !== null) {
+    const partWeeks = getStudyPart(openPart).weeks
+    if (week !== undefined && partWeeks.some((w) => w.number === week)) {
+      openWeek = week
+    } else if (openChapter !== null) {
+      openWeek = partWeeks.find((w) => openChapter >= w.chapterStart && openChapter <= w.chapterEnd)?.number ?? null
+    }
+  }
+
   const currentPart = openPart ?? 1
+
+  const activeVersion: BibleVersion =
+    version === 'KJV' || version === 'NKJV' || version === 'ESV' || version === 'NIV' ? version : 'KJV'
 
   const partChapters = useMemo(
     () => ISAIAH_CHAPTERS.filter((c) => c.part === currentPart),
     [currentPart]
   )
 
-  function handlePartClick(part: 1 | 2 | 3) {
-    setOpenPart(part)
-    setOpenWeek(null)
-    setOpenChapter(null)
+  function go(nextPart?: number, nextWeek?: number, nextChapter?: number, nextVersion?: BibleVersion) {
+    onNavigate({ page: 'study', view: 'isaiah', part: nextPart, week: nextWeek, chapter: nextChapter, version: nextChapter ? nextVersion : undefined })
+  }
+
+  function handlePartClick(partNum: 1 | 2 | 3) {
+    go(partNum)
   }
 
   function handleWeekClick(weekNumber: number) {
-    setOpenWeek(weekNumber)
-    setOpenChapter(null)
+    go(currentPart, weekNumber)
   }
 
-  function handleContinueWeek(part: 1 | 2 | 3, weekNumber: number) {
-    setOpenPart(part)
-    setOpenWeek(weekNumber)
-    setOpenChapter(null)
+  function handleContinueWeek(partNum: 1 | 2 | 3, weekNumber: number) {
+    go(partNum, weekNumber)
   }
 
   function handleStartStudy() {
-    setOpenPart(1)
-    setOpenWeek(1)
-    setOpenChapter(null)
+    go(1, 1)
   }
 
   function handleChapterClick(n: number) {
     const ch = ISAIAH_CHAPTERS.find((c) => c.number === n)
-    if (ch) setOpenPart(ch.part)
-    setOpenChapter(n)
+    if (!ch) return
+    const chWeek = getStudyPart(ch.part).weeks.find((w) => n >= w.chapterStart && n <= w.chapterEnd)?.number
+    go(ch.part, chWeek, n)
   }
 
   function handleBackToParts() {
-    setOpenPart(null)
-    setOpenWeek(null)
-    setOpenChapter(null)
+    go()
   }
 
   function handleToggleCompleteChapter(n: number) {
@@ -946,25 +1211,55 @@ export default function StudySection() {
     setCompletedChapters(next)
   }
 
-  function handleToggleCompleteWeek(part: 1 | 2 | 3, weekNumber: number) {
-    const key = weekKey(part, weekNumber)
-    const next = new Set(completedWeeks)
-    if (next.has(key)) next.delete(key)
-    else next.add(key)
-    saveProgress(userId, next)
-    setCompletedWeeks(next)
+  function handleToggleResource(partNum: 1 | 2 | 3, weekNumber: number, type: ResourceType) {
+    const key = weekKey(partNum, weekNumber)
+    const current = completedResources[key] ?? []
+    const next = current.includes(type)
+      ? current.filter((t) => t !== type)
+      : [...current, type]
+    const nextResources: CompletedResources = { ...completedResources }
+    if (next.length > 0) nextResources[key] = next
+    else delete nextResources[key]
+
+    const nextWeeks = new Set(completedWeeks)
+    if (next.length > 0) nextWeeks.add(key)
+    else nextWeeks.delete(key)
+
+    saveResources(userId, nextResources)
+    saveProgress(userId, nextWeeks)
+    setCompletedResources(nextResources)
+    setCompletedWeeks(nextWeeks)
+  }
+
+  function handlePrevWeek() {
+    if (openPart === null || openWeek === null) return
+    const weeks = getStudyPart(openPart).weeks
+    const idx = weeks.findIndex((w) => w.number === openWeek)
+    if (idx > 0) go(openPart, weeks[idx - 1].number)
+  }
+
+  function handleNextWeek() {
+    if (openPart === null || openWeek === null) return
+    const weeks = getStudyPart(openPart).weeks
+    const idx = weeks.findIndex((w) => w.number === openWeek)
+    if (idx >= 0 && idx < weeks.length - 1) go(openPart, weeks[idx + 1].number)
   }
 
   function handlePrevChapter() {
     if (openChapter === null) return
     const idx = partChapters.findIndex((c) => c.number === openChapter)
-    if (idx > 0) setOpenChapter(partChapters[idx - 1].number)
+    if (idx > 0) go(currentPart, openWeek ?? 1, partChapters[idx - 1].number, activeVersion)
   }
 
   function handleNextChapter() {
     if (openChapter === null) return
     const idx = partChapters.findIndex((c) => c.number === openChapter)
-    if (idx >= 0 && idx < partChapters.length - 1) setOpenChapter(partChapters[idx + 1].number)
+    if (idx >= 0 && idx < partChapters.length - 1) go(currentPart, openWeek ?? 1, partChapters[idx + 1].number, activeVersion)
+  }
+
+  function handleVersionChange(v: BibleVersion) {
+    if (openChapter === null || openPart === null) return
+    go(openPart, openWeek ?? 1, openChapter, v)
   }
 
   return (
@@ -1021,11 +1316,14 @@ export default function StudySection() {
           part={openPart}
           weekNumber={openWeek ?? 1}
           chapterNumber={openChapter}
-          onBack={() => setOpenChapter(null)}
+          version={activeVersion}
+          onBack={() => go(currentPart, openWeek ?? 1)}
           onPrevChapter={handlePrevChapter}
           onNextChapter={handleNextChapter}
           completedChapters={completedChapters}
           onToggleComplete={handleToggleCompleteChapter}
+          onOpenLogin={onOpenLogin}
+          onVersionChange={handleVersionChange}
         />
       ) : openWeek !== null && openPart !== null ? (
         <WeekView
@@ -1033,16 +1331,21 @@ export default function StudySection() {
           weekNumber={openWeek}
           completedWeeks={completedWeeks}
           completedChapters={completedChapters}
-          onBack={() => setOpenWeek(null)}
+          completedResources={completedResources}
+          onBack={() => go(currentPart)}
           onChapter={handleChapterClick}
-          onToggleCompleteWeek={() => handleToggleCompleteWeek(openPart, openWeek)}
+          onToggleResource={(type) => handleToggleResource(openPart, openWeek, type)}
           onToggleCompleteChapter={handleToggleCompleteChapter}
+          onPrevWeek={handlePrevWeek}
+          onNextWeek={handleNextWeek}
+          onSelectWeek={handleWeekClick}
         />
       ) : openPart !== null ? (
         <PartOverview
           part={openPart}
           completedWeeks={completedWeeks}
           completedChapters={completedChapters}
+          completedResources={completedResources}
           onBack={handleBackToParts}
           onWeekClick={handleWeekClick}
         />

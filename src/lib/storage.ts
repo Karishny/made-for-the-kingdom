@@ -131,6 +131,22 @@ export function saveChapters(id: string, chapters: Set<number>) {
   writeJSON(chaptersKey(id), [...chapters])
 }
 
+// ─── Per-user weekly-resource completion ───
+// weekKey -> completed resource types. Completing any one resource completes
+// the week, so this lives alongside (and feeds) the completed-weeks set.
+
+function resourcesKey(id: string) {
+  return `mftk_resources_${id}`
+}
+
+export function loadResources(id: string): Record<string, string[]> {
+  return readJSON<Record<string, string[]>>(resourcesKey(id)) ?? {}
+}
+
+export function saveResources(id: string, resources: Record<string, string[]>) {
+  writeJSON(resourcesKey(id), resources)
+}
+
 // One-time migration: if the account has no saved progress yet, move the old
 // shared progress key into it so existing data is not silently lost.
 export function adoptLegacyProgress(id: string) {

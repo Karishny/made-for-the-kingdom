@@ -26,6 +26,10 @@ export interface StudyPart {
   weeks: StudyWeek[]
 }
 
+// Per-week resource completion, keyed by weekKey (e.g. "1-3"). Completing ANY
+// ONE resource in a week completes that week. Stored per user (private).
+export type CompletedResources = Record<string, ResourceType[]>
+
 const WEEKLY_RESOURCES: WeekResource[] = [
   { type: "video", label: "Video", placeholder: "Video resource coming soon" },
   {
@@ -129,10 +133,23 @@ export function weekStatus(
   part: 1 | 2 | 3,
   weekNumber: number,
 ): "complete" | "in-progress" | "not-started" {
-  if (completedWeeks.has(weekKey(part, weekNumber))) return "complete"
+  if (isWeekComplete(completedWeeks, {}, part, weekNumber)) return "complete"
   const week = getStudyWeek(part, weekNumber)
   const anyDone = week.chapterNumbers.some((n) => completedChapters.has(n))
   return anyDone ? "in-progress" : "not-started"
+}
+
+// A week is complete when it is in the completedWeeks set OR any of its weekly
+// resources has been completed (engaging with any one resource completes it).
+export function isWeekComplete(
+  completedWeeks: Set<string>,
+  completedResources: CompletedResources,
+  part: 1 | 2 | 3,
+  weekNumber: number,
+): boolean {
+  const key = weekKey(part, weekNumber)
+  if (completedWeeks.has(key)) return true
+  return (completedResources[key]?.length ?? 0) > 0
 }
 
 // Week numbers (within a part) after which a BREAK separator is shown in the
