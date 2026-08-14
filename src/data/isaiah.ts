@@ -8,10 +8,13 @@ export interface ChapterData {
   content: Partial<Record<BibleVersion, string>>
 }
 
+// `accents` are the approved secondary palette for each part — used subtly for
+// borders, small labels, discussion/notes accents and hover states while the
+// part's main `color` stays the primary identity.
 export const PARTS = [
-  { part: 1 as const, label: 'Warning of Judgement', chapters: '1–39', range: [1, 39], schedule: '2–4 chapters a week', color: '#a85b31' },
-  { part: 2 as const, label: 'Comfort and Hope',     chapters: '40–55', range: [40, 55], schedule: '2–4 chapters a week', color: '#949b61' },
-  { part: 3 as const, label: 'Future Restoration',   chapters: '56–66', range: [56, 66], schedule: '2–4 chapters a week', color: '#cfac29' },
+  { part: 1 as const, label: 'Warning of Judgement', chapters: '1–39', range: [1, 39], schedule: '2–4 chapters a week', color: '#a85b31', accents: ['#763f21', '#a84c5c', '#c57c89'] },
+  { part: 2 as const, label: 'Comfort and Hope',     chapters: '40–55', range: [40, 55], schedule: '2–4 chapters a week', color: '#949b61', accents: ['#454930', '#c9b050', '#cfac29'] },
+  { part: 3 as const, label: 'Future Restoration',   chapters: '56–66', range: [56, 66], schedule: '2–4 chapters a week', color: '#cfac29', accents: ['#c9b050', '#a85b31', '#949b61'] },
 ]
 
 export const ISAIAH_CHAPTERS: ChapterData[] = [

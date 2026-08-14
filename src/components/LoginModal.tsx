@@ -90,14 +90,6 @@ export default function LoginModal({ onClose }: Props) {
           >
             enter the study
           </Button>
-          <button
-            type="button"
-            onClick={onClose}
-            className="w-full py-1.5 text-xs"
-            style={{ fontFamily: "'Source Sans 3', sans-serif", color: `${C.ink}55` }}
-          >
-            Continue as guest
-          </button>
         </form>
       </div>
     </div>

@@ -23,6 +23,7 @@ export interface StudyPart {
   label: string
   chaptersLabel: string
   color: string
+  accents: string[]
   weeks: StudyWeek[]
 }
 
@@ -108,6 +109,7 @@ export const STUDY_PARTS: StudyPart[] = (() => {
       label: p.label,
       chaptersLabel: p.chapters,
       color: p.color,
+      accents: p.accents,
       weeks,
     }
   })
@@ -165,4 +167,28 @@ export function breakAfterWeeks(part: 1 | 2 | 3): Set<number> {
     if (atGroupEnd && !isLast) breaks.add(week.number)
   })
   return breaks
+}
+
+// The complete Isaiah Study Journey as one ordered list of weeks (Part 1 → 2 →
+// 3). Week numbers are globally unique, but this ordered list is what lets the
+// Previous/Next week navigation flow continuously across part boundaries while
+// keeping the visual Part 1 / Part 2 / Part 3 structure untouched.
+const STUDY_WEEK_ORDER: Array<{ part: 1 | 2 | 3; week: number }> = STUDY_PARTS.flatMap((p) =>
+  p.weeks.map((w) => ({ part: p.part, week: w.number })),
+)
+
+// The week immediately before (part, weekNumber) in the journey, or null at the
+// very first week of Part 1. Crosses part boundaries (e.g. Part 2 Week 1 →
+// Part 1 Week 11).
+export function getPrevWeek(part: 1 | 2 | 3, weekNumber: number): { part: 1 | 2 | 3; week: number } | null {
+  const idx = STUDY_WEEK_ORDER.findIndex((w) => w.part === part && w.week === weekNumber)
+  return idx > 0 ? STUDY_WEEK_ORDER[idx - 1] : null
+}
+
+// The week immediately after (part, weekNumber) in the journey, or null at the
+// very last week of Part 3. Crosses part boundaries (e.g. Part 1 Week 11 →
+// Part 2 Week 12).
+export function getNextWeek(part: 1 | 2 | 3, weekNumber: number): { part: 1 | 2 | 3; week: number } | null {
+  const idx = STUDY_WEEK_ORDER.findIndex((w) => w.part === part && w.week === weekNumber)
+  return idx >= 0 && idx < STUDY_WEEK_ORDER.length - 1 ? STUDY_WEEK_ORDER[idx + 1] : null
 }

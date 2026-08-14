@@ -16,6 +16,17 @@ import { randomUUID } from 'node:crypto'
 import type { IncomingMessage, ServerResponse } from 'node:http'
 import type { Plugin } from 'vite'
 
+interface StoredReply {
+  id: string
+  createdAt: string
+  authorId: string
+  authorName: string
+  authorColor: string
+  authorInitials: string
+  body: string
+  date: string
+}
+
 interface StoredNote {
   id: string
   createdAt: string
@@ -32,6 +43,8 @@ interface StoredNote {
   body: string
   date: string
   tag: string
+  noteType?: string
+  replies?: StoredReply[]
 }
 
 const DATA_DIR = join(process.cwd(), 'data')
@@ -98,6 +111,25 @@ function normalize(body: Record<string, unknown>): StoredNote | null {
     body: noteBody,
     date: typeof body.date === 'string' && body.date ? body.date : new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }),
     tag: typeof body.tag === 'string' && body.tag ? body.tag.trim() : 'Study Note',
+    noteType: typeof body.noteType === 'string' && body.noteType.trim() ? body.noteType.trim() : 'Study Note',
+    replies: [],
+  }
+}
+
+function normalizeReply(body: Record<string, unknown>): StoredReply | null {
+  const authorId = typeof body.authorId === 'string' ? body.authorId.trim() : ''
+  const authorName = typeof body.authorName === 'string' ? body.authorName.trim() : ''
+  const replyBody = typeof body.body === 'string' ? body.body.trim() : ''
+  if (!authorId || !authorName || !replyBody) return null
+  return {
+    id: randomUUID(),
+    createdAt: new Date().toISOString(),
+    authorId,
+    authorName,
+    authorColor: typeof body.authorColor === 'string' ? body.authorColor : '#a85b31',
+    authorInitials: typeof body.authorInitials === 'string' ? body.authorInitials : authorName.slice(0, 2).toUpperCase(),
+    body: replyBody,
+    date: typeof body.date === 'string' && body.date ? body.date : new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }),
   }
 }
 
@@ -147,6 +179,33 @@ export function notesApiPlugin(): Plugin {
           store.splice(idx, 1)
           persist(store)
           sendJson(res, 200, { ok: true })
+          return
+        }
+
+        // POST /api/notes/:id/replies — append a reply to an existing note.
+        const replyMatch = /^\/api\/notes\/([^/]+)\/replies$/.exec(url)
+        if (req.method === 'POST' && replyMatch) {
+          const id = decodeURIComponent(replyMatch[1])
+          const note = store.find((n) => n.id === id)
+          if (!note) {
+            sendJson(res, 404, { error: 'Note not found' })
+            return
+          }
+          void (async () => {
+            try {
+              const reply = normalizeReply(await readBody(req))
+              if (!reply) {
+                sendJson(res, 400, { error: 'authorId, authorName and body are required' })
+                return
+              }
+              if (!Array.isArray(note.replies)) note.replies = []
+              note.replies.push(reply)
+              persist(store)
+              sendJson(res, 201, reply)
+            } catch (err) {
+              sendJson(res, 400, { error: err instanceof Error ? err.message : 'Invalid request' })
+            }
+          })()
           return
         }
 

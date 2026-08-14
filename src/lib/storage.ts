@@ -147,6 +147,22 @@ export function saveResources(id: string, resources: Record<string, string[]>) {
   writeJSON(resourcesKey(id), resources)
 }
 
+// ─── Per-user discussion completion ───
+// weekKey -> "done". A simple set so each week's Discussion Questions has one
+// subtle done state, stored privately per account like the other progress.
+
+function discussionKey(id: string) {
+  return `mftk_discussion_${id}`
+}
+
+export function loadDiscussionDone(id: string): Set<string> {
+  return new Set<string>(readJSON<string[]>(discussionKey(id)) ?? [])
+}
+
+export function saveDiscussionDone(id: string, weeks: Set<string>) {
+  writeJSON(discussionKey(id), [...weeks])
+}
+
 // One-time migration: if the account has no saved progress yet, move the old
 // shared progress key into it so existing data is not silently lost.
 export function adoptLegacyProgress(id: string) {

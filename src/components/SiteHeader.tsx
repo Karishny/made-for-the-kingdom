@@ -52,11 +52,19 @@ function MobileAuthArea({ onSignIn }: { onSignIn: () => void }) {
   const { user, logout } = useUser()
   if (!user) {
     return (
-      <div className="flex justify-end">
+      <div className="flex justify-end pr-4">
         <Button
           size="sm"
           onClick={onSignIn}
-          style={{ background: '#454930', color: '#F7F6F2', border: '1px solid #454930' }}
+          style={{ background: C.olive, color: '#F7F6F2', border: `1px solid ${C.olive}` }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = C.oliveDark
+            e.currentTarget.style.borderColor = C.oliveDark
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = C.olive
+            e.currentTarget.style.borderColor = C.olive
+          }}
         >
           sign in
         </Button>
@@ -65,11 +73,11 @@ function MobileAuthArea({ onSignIn }: { onSignIn: () => void }) {
   }
   const initial = (user.name.trim()[0] ?? '?').toUpperCase()
   return (
-    <div className="flex items-center justify-end gap-3">
+    <div className="flex items-center justify-end gap-3 pr-4">
       <button
         onClick={logout}
-        className="text-xs"
-        style={{ fontFamily: FONT_SANS, color: `${C.ink}44`, letterSpacing: '0.08em' }}
+        className="text-sm hover:opacity-70 transition-opacity duration-200"
+        style={{ fontFamily: FONT_SANS, color: C.oliveDark, letterSpacing: '0.08em' }}
       >
         sign out
       </button>
@@ -167,14 +175,16 @@ export default function SiteHeader({
                 <button
                   key={link}
                   onClick={() => handleNav(link)}
-                  className="pr-1 pl-6 py-2.5 text-right transition-all duration-200"
+                  className={`pr-4 pl-6 py-2.5 text-right rounded transition-all duration-200 hover:bg-[rgba(148,155,97,0.16)] active:bg-[rgba(148,155,97,0.28)] ${
+                    activeNav === link ? 'bg-[rgba(148,155,97,0.22)]' : 'bg-transparent'
+                  }`}
                   style={{
                     fontFamily: FONT_SERIF,
-                    fontWeight: activeNav === link ? 400 : 300,
-                    fontSize: '15px',
+                    fontWeight: activeNav === link ? 500 : 400,
+                    fontSize: '16px',
                     letterSpacing: '0.16em',
                     textTransform: 'lowercase',
-                    color: activeNav === link ? C.goldDeep : `${C.ink}77`,
+                    color: C.oliveDark,
                   }}
                 >
                   {link}

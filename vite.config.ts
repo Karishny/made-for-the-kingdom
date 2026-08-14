@@ -2,7 +2,6 @@ import { defineConfig, type HtmlTagDescriptor, type Plugin } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import path from 'node:path'
-
 import siteConfiguration from './.figma/make/site.json'
 import { notesApiPlugin } from './server/notes'
 
@@ -35,7 +34,20 @@ export default defineConfig(({ mode }) => {
       host: '0.0.0.0',
       port: parseInt(process.env.PORT || '8443'),
       strictPort: true,
-      watch: { ignored: ['**/.figma/**'] },
+      watch: {
+        // Only the root-level data/ directory is a server-side persistence layer
+        // (the shared notes store); the notes middleware writes to it on every
+        // mutation, so exclude it from Vite's watcher to avoid a full-reload on
+        // each save. src/data/ holds study data modules and must stay watched.
+        ignored: [
+          '**/.figma/**',
+          (filePath: string) => {
+            const normalized = path.resolve(filePath)
+            const dataRoot = path.resolve(__dirname, 'data')
+            return normalized === dataRoot || normalized.startsWith(`${dataRoot}/`)
+          },
+        ],
+      },
     },
     preview: {
       host: '0.0.0.0',
