@@ -2,11 +2,17 @@ import { PARTS, ISAIAH_CHAPTERS } from "./isaiah"
 
 export type ResourceType = "video" | "commentary" | "podcast" | "articles"
 
+export interface VideoResource {
+  title: string
+  url: string
+}
+
 export interface WeekResource {
   type: ResourceType
   label: string
   placeholder: string
   url?: string
+  videos?: VideoResource[]
 }
 
 export interface StudyWeek {
@@ -90,7 +96,16 @@ function buildWeeks(part: 1 | 2 | 3, weekStart: number): StudyWeek[] {
       resources: WEEKLY_RESOURCES.map((r) => {
         const copy = { ...r }
         if (copy.type === "video" && weekNumber === 1) {
-          copy.url = "https://www.youtube.com/watch?v=d0A6Uchb1F8&t=369s"
+          copy.videos = [
+            {
+              title: "Let's Reason Together | Isaiah 1–5 | Gary Hamrick",
+              url: "https://youtu.be/bcOzM-XShus?si=syP2N4aX9W4fHDgC",
+            },
+            {
+              title: "Book of Isaiah Summary: A Complete Animated Overview (Part 1)",
+              url: "https://youtu.be/d0A6Uchb1F8?si=RLLH8riBRfiw04qu",
+            },
+          ]
           copy.placeholder = "Watch this week's teaching video"
         }
         return copy

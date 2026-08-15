@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import LoginModal from '@/components/LoginModal'
 import NotesSection from '@/components/NotesSection'
 import StudySection from '@/components/ScriptureSection'
@@ -10,12 +10,10 @@ import MadeFtk from '@/components/MadeFtk'
 import { OrnamentalDivider } from '@/components/SectionHeader'
 import { C, P, FONT_SERIF, FONT_SANS } from '@/theme'
 import { useRoute } from '@/lib/router'
-import type { NewNote } from '@/lib/notesApi'
 
 export default function App() {
   const { route, navigate } = useRoute()
   const [showLogin, setShowLogin] = useState(false)
-  const [notePrefill, setNotePrefill] = useState<Partial<NewNote> | null>(null)
 
   const activeNav = route.page === 'home' ? 'Home' : route.page === 'study' ? 'Study' : route.page === 'notes' ? 'Notes' : 'About'
   const studyView = route.page === 'study' ? (route.view ?? 'library') : 'library'
@@ -31,21 +29,8 @@ export default function App() {
     navigate({ page: 'study', view: 'isaiah' })
   }
 
-  // "Add a Note" from a week page jumps to the Notes page with the study
-  // context prefilled (study / part / week / scripture range).
-  function handleOpenNotesPrefill(prefill: Partial<NewNote>) {
-    setNotePrefill(prefill)
-    navigate({ page: 'notes' })
-  }
-
   const isWideMain = activeNav === 'Home' || (activeNav === 'Study' && studyView === 'library')
   const isHome = activeNav === 'Home'
-
-  // The week-page "Add a Note" prefill is one-shot: clear it once the user has
-  // left the Notes page so it never resurfaces on a later manual visit.
-  useEffect(() => {
-    if (route.page !== 'notes' && notePrefill) setNotePrefill(null)
-  }, [route.page, notePrefill])
 
   return (
     <div className="relative min-h-dvh" style={{ color: C.ink, backgroundColor: C.bg }}>
@@ -68,13 +53,13 @@ export default function App() {
             color: P.titleMuted,
             maxWidth: 'min(60vw, 1100px)',
             margin: '0 auto',
-            marginTop: 'clamp(2.5rem, 6vw, 4.5rem)',
+            marginTop: 'clamp(1rem, 3.5vw, 2.5rem)',
           }}>
             made for the{' '}
             <span style={{ color: P.gold, fontStyle: 'italic' }}>kingdom</span>
           </h1>
 
-          <div className="mx-auto max-w-4xl lg:max-w-5xl mt-6 md:mt-8">
+          <div className="mx-auto max-w-4xl lg:max-w-5xl mt-10 md:mt-14">
             <p className="text-[16px] md:text-[18px]" style={{ fontFamily: FONT_SANS, fontWeight: 300, color: P.support, lineHeight: 2 }}>
               We were all created with purpose, called to grow in the gifts God has given us, and reminded that the greatest masterpiece has always been His story.
             </p>
@@ -83,11 +68,11 @@ export default function App() {
             </p>
           </div>
 
-          <div className="mt-10 md:mt-14 text-center">
+          <div className="mt-12 md:mt-16 text-center">
             <MadeFtk />
           </div>
 
-          <div className="mt-6 md:mt-8 mb-12 md:mb-16 flex flex-wrap items-center justify-center gap-3">
+          <div className="mt-10 md:mt-14 mb-12 md:mb-16 flex flex-wrap items-center justify-center gap-3">
             <Button
               size="md"
               onClick={handleStartStudy}
@@ -130,7 +115,6 @@ export default function App() {
                   version={route.version}
                   onOpenLogin={() => setShowLogin(true)}
                   onNavigate={navigate}
-                  onOpenNotesPrefill={handleOpenNotesPrefill}
                 />
               </>
             )}
@@ -139,7 +123,7 @@ export default function App() {
 
         {/* ══ NOTES ══ */}
         {activeNav === 'Notes' && (
-          <NotesSection onOpenLogin={() => setShowLogin(true)} initialDraft={notePrefill ?? undefined} />
+          <NotesSection onOpenLogin={() => setShowLogin(true)} />
         )}
 
         {/* ══ ABOUT ══ */}

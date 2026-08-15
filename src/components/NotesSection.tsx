@@ -2,8 +2,8 @@ import { useEffect, useState } from 'react'
 import { useUser } from '@/context/UserContext'
 import SectionHeader from '@/components/SectionHeader'
 import Button from '@/components/Button'
+import NoteComposer, { NoteDropdown, Avatar } from '@/components/NoteComposer'
 import {
-  createNote,
   listNotes,
   addReply,
   removeNote,
@@ -11,7 +11,6 @@ import {
   noteTypeLabel,
   noteTypeColor,
   type StudyNote,
-  type NewNote,
 } from '@/lib/notesApi'
 
 const C = {
@@ -22,27 +21,6 @@ const C = {
 
 const FONT_SANS = "'Source Sans 3', sans-serif"
 const FONT_SERIF = "'Fraunces', serif"
-
-const DEFAULT_DRAFT = {
-  study: 'Isaiah',
-  scripture: '',
-  noteType: 'Question',
-  title: '',
-  tag: '',
-  body: '',
-}
-
-function Avatar({ name, color, initials }: { name: string; color: string; initials: string }) {
-  return (
-    <div
-      className="flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold"
-      title={name}
-      style={{ background: `${color}25`, color, border: `1.5px solid ${color}55`, fontFamily: FONT_SANS }}
-    >
-      {initials}
-    </div>
-  )
-}
 
 function TypeBadge({ type }: { type?: string }) {
   const color = noteTypeColor(type)
@@ -67,39 +45,23 @@ function NoteSelect({
   label: string
 }) {
   return (
-    <label className="block">
-      <span className="block text-[10px] tracking-[0.2em] uppercase mb-1"
-        style={{ color: `${C.ink}66`, fontFamily: FONT_SANS, fontWeight: 600 }}>
-        {label}
-      </span>
-      <div className="relative">
-        <select
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          aria-label={ariaLabel}
-          className="appearance-none w-full rounded-sm px-3 py-2 pr-8 text-sm outline-none cursor-pointer"
-          style={{ fontFamily: FONT_SANS, background: C.bg, border: `1px solid ${C.ink}25`, color: C.ink }}>
-          {options.map((o) => (
-            <option key={o} value={o}>{o}</option>
-          ))}
-        </select>
-        <svg width="10" height="10" viewBox="0 0 16 16" fill="none" aria-hidden="true"
-          className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
-          <path d="M4 6 L8 10 L12 6" stroke={C.ink} strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
-      </div>
-    </label>
+    <NoteDropdown
+      label={label}
+      ariaLabel={ariaLabel}
+      value={value}
+      onChange={onChange}
+      options={options}
+    />
   )
 }
 
-export default function NotesSection({ onOpenLogin, initialDraft }: { onOpenLogin: () => void; initialDraft?: Partial<NewNote> }) {
+export default function NotesSection({ onOpenLogin }: { onOpenLogin: () => void }) {
   const { user } = useUser()
   const [notes, setNotes] = useState<StudyNote[]>([])
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState(false)
-  const [saveError, setSaveError] = useState(false)
-  const [drafting, setDrafting] = useState(Boolean(initialDraft))
-  const [draft, setDraft] = useState(() => ({ ...DEFAULT_DRAFT, ...initialDraft }))
+  const [drafting, setDrafting] = useState(false)
+  const [filtersOpen, setFiltersOpen] = useState(false)
   const [activeNote, setActiveNote] = useState<string | null>(null)
   const [studyFilter, setStudyFilter] = useState('All Studies')
   const [typeFilter, setTypeFilter] = useState('All Types')
@@ -134,34 +96,6 @@ export default function NotesSection({ onOpenLogin, initialDraft }: { onOpenLogi
   function openNote(id: string) {
     setActiveNote((cur) => (cur === id ? null : id))
     setReplyBody('')
-  }
-
-  async function saveNote() {
-    if (!user || !draft.body.trim()) return
-    setSaveError(false)
-    try {
-      const created = await createNote({
-        authorId: user.id,
-        authorName: user.name,
-        authorColor: user.color,
-        authorInitials: user.initials,
-        study: draft.study || 'Isaiah',
-        part: draft.part,
-        week: draft.week,
-        chapter: draft.chapter,
-        scripture: draft.scripture || 'Isaiah',
-        noteType: draft.noteType || 'Question',
-        title: draft.title.trim() || 'Untitled Note',
-        body: draft.body.trim(),
-        tag: draft.tag.trim() || 'Study Note',
-        date: new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }),
-      })
-      setNotes([created, ...notes])
-      setDraft(DEFAULT_DRAFT)
-      setDrafting(false)
-    } catch {
-      setSaveError(true)
-    }
   }
 
   async function submitReply() {
@@ -203,6 +137,9 @@ export default function NotesSection({ onOpenLogin, initialDraft }: { onOpenLogi
       .some((field) => field && field.toLowerCase().includes(query))
   })
 
+  const activeFilterCount =
+    (studyFilter !== 'All Studies' ? 1 : 0) + (typeFilter !== 'All Types' ? 1 : 0) + (query ? 1 : 0)
+
   const inputStyle = {
     fontFamily: FONT_SANS,
     background: C.bg,
@@ -225,7 +162,7 @@ export default function NotesSection({ onOpenLogin, initialDraft }: { onOpenLogi
         />
 
         {user ? (
-          <Button onClick={() => { setDrafting((d) => !d); setDraft(DEFAULT_DRAFT) }} size="sm" className="mt-2">
+          <Button onClick={() => setDrafting((d) => !d)} size="sm" className="mt-2">
             {drafting ? 'cancel' : '+ add note'}
           </Button>
         ) : (
@@ -235,137 +172,79 @@ export default function NotesSection({ onOpenLogin, initialDraft }: { onOpenLogi
         )}
       </div>
 
-      {/* Filters: study · type · search */}
-      <div className="rounded border mb-6 p-4" style={{ borderColor: `${C.ink}18`, background: `${C.ink}04` }}>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 items-end">
-          <NoteSelect label="Study" ariaLabel="Filter by study" value={studyFilter} onChange={setStudyFilter} options={studies} />
-          <NoteSelect label="Type" ariaLabel="Filter by note type" value={typeFilter} onChange={setTypeFilter} options={['All Types', ...NOTE_TYPES]} />
-          <div className="sm:col-span-2">
-            <span className="block text-[10px] tracking-[0.2em] uppercase mb-1"
-              style={{ color: `${C.ink}66`, fontFamily: FONT_SANS, fontWeight: 600 }}>
-              Search
+      {/* Filters: hidden behind a "search notes" toggle so the page stays calm */}
+      <div className="mb-6">
+        <button
+          type="button"
+          onClick={() => setFiltersOpen((o) => !o)}
+          className="inline-flex items-center gap-2 rounded-sm px-4 py-2 text-xs tracking-[0.18em] uppercase cursor-pointer"
+          style={{
+            fontFamily: FONT_SANS,
+            fontWeight: 600,
+            color: `${C.ink}66`,
+            border: `1px solid ${C.ink}18`,
+            background: `${C.ink}04`,
+          }}
+        >
+          <svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden="true" style={{ opacity: 0.7 }}>
+            <circle cx="7" cy="7" r="4.5" stroke={C.ink} strokeWidth="1.3" />
+            <path d="M10.5 10.5 L14 14" stroke={C.ink} strokeWidth="1.3" strokeLinecap="round" />
+          </svg>
+          {filtersOpen ? 'hide search & filters' : 'search notes'}
+          {!filtersOpen && activeFilterCount > 0 && (
+            <span
+              className="inline-flex items-center justify-center rounded-full w-5 h-5 text-[10px]"
+              style={{ color: C.bg, background: C.terra, fontFamily: FONT_SANS, fontWeight: 700 }}
+            >
+              {activeFilterCount}
             </span>
-            <div className="relative">
-              <svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden="true"
-                className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" style={{ opacity: 0.5 }}>
-                <circle cx="7" cy="7" r="4.5" stroke={C.ink} strokeWidth="1.3" />
-                <path d="M10.5 10.5 L14 14" stroke={C.ink} strokeWidth="1.3" strokeLinecap="round" />
-              </svg>
-              <input
-                type="text"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search titles, scripture, notes, tags…"
-                className="w-full rounded-sm pl-9 pr-3 py-2 text-sm outline-none"
-                style={inputStyle}
-              />
+          )}
+        </button>
+
+        {filtersOpen && (
+          <div className="note-fade-in rounded border mt-3 p-4"
+            style={{ borderColor: `${C.ink}18`, background: `${C.ink}04` }}>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 items-end">
+              <NoteSelect label="Study" ariaLabel="Filter by study" value={studyFilter} onChange={setStudyFilter} options={studies} />
+              <NoteSelect label="Type" ariaLabel="Filter by note type" value={typeFilter} onChange={setTypeFilter} options={['All Types', ...NOTE_TYPES]} />
+              <div className="sm:col-span-2">
+                <span className="block text-[10px] tracking-[0.2em] uppercase mb-1"
+                  style={{ color: `${C.ink}66`, fontFamily: FONT_SANS, fontWeight: 600 }}>
+                  Search
+                </span>
+                <div className="relative">
+                  <svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden="true"
+                    className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" style={{ opacity: 0.5 }}>
+                    <circle cx="7" cy="7" r="4.5" stroke={C.ink} strokeWidth="1.3" />
+                    <path d="M10.5 10.5 L14 14" stroke={C.ink} strokeWidth="1.3" strokeLinecap="round" />
+                  </svg>
+                  <input
+                    type="text"
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    placeholder="Search titles, scripture, notes, tags…"
+                    className="w-full rounded-sm pl-9 pr-3 py-2 text-sm outline-none"
+                    style={inputStyle}
+                  />
+                </div>
+              </div>
             </div>
           </div>
-        </div>
+        )}
       </div>
 
       {/* New note compose */}
       {drafting && user && (
-        <div className="rounded border mb-6 overflow-hidden"
-          style={{ borderColor: `${C.terra}45`, background: `${C.terra}07` }}>
-          <div className="px-5 py-3 flex items-center gap-3"
-            style={{ borderBottom: `1px solid ${C.terra}20` }}>
-            <Avatar name={user.name} color={user.color} initials={user.initials} />
-            <span className="text-xs tracking-widest uppercase"
-              style={{ color: C.terra, fontFamily: FONT_SANS, fontWeight: 600 }}>
-              {user.name}
-            </span>
-            <div className="flex-1" />
-            <button onClick={() => setDrafting(false)} className="text-xs"
-              style={{ color: `${C.ink}55`, fontFamily: FONT_SANS }}>
-              Cancel
-            </button>
-          </div>
-          <div className="p-5 space-y-3">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <NoteSelect label="Study" ariaLabel="Note study" value={draft.study}
-                onChange={(v) => setDraft({ ...draft, study: v })}
-                options={studies.filter((s) => s !== 'All Studies')} />
-              <label className="block">
-                <span className="block text-[10px] tracking-[0.2em] uppercase mb-1"
-                  style={{ color: `${C.ink}66`, fontFamily: FONT_SANS, fontWeight: 600 }}>
-                  Scripture Reference
-                </span>
-                <input type="text" placeholder="Isaiah 6:1-8"
-                  value={draft.scripture} onChange={(e) => setDraft({ ...draft, scripture: e.target.value })}
-                  className="w-full rounded-sm px-3 py-2 text-sm outline-none"
-                  style={inputStyle} />
-              </label>
-            </div>
-
-            {/* Note type — the main organisational field */}
-            <label className="block">
-              <span className="block text-[10px] tracking-[0.2em] uppercase mb-1"
-                style={{ color: C.terra, fontFamily: FONT_SANS, fontWeight: 700 }}>
-                What are you sharing?
-              </span>
-              <div className="relative">
-                <select value={draft.noteType}
-                  onChange={(e) => setDraft({ ...draft, noteType: e.target.value })}
-                  aria-label="Note type"
-                  className="appearance-none w-full rounded-sm px-3 py-2 pr-8 text-sm outline-none cursor-pointer"
-                  style={{ fontFamily: FONT_SANS, background: C.bg, border: `1px solid ${noteTypeColor(draft.noteType)}55`, color: C.ink, fontWeight: 600 }}>
-                  {NOTE_TYPES.map((t) => (
-                    <option key={t} value={t}>{t}</option>
-                  ))}
-                </select>
-                <svg width="10" height="10" viewBox="0 0 16 16" fill="none" aria-hidden="true"
-                  className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
-                  <path d="M4 6 L8 10 L12 6" stroke={noteTypeColor(draft.noteType)} strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-              </div>
-            </label>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <label className="block">
-                <span className="block text-[10px] tracking-[0.2em] uppercase mb-1"
-                  style={{ color: `${C.ink}66`, fontFamily: FONT_SANS, fontWeight: 600 }}>
-                  Note Title
-                </span>
-                <input type="text" placeholder="A short headline for your note…"
-                  value={draft.title} onChange={(e) => setDraft({ ...draft, title: e.target.value })}
-                  className="w-full rounded-sm px-3 py-2 text-sm outline-none"
-                  style={inputStyle} />
-              </label>
-              <label className="block">
-                <span className="block text-[10px] tracking-[0.2em] uppercase mb-1"
-                  style={{ color: `${C.ink}66`, fontFamily: FONT_SANS, fontWeight: 600 }}>
-                  Tags (optional)
-                </span>
-                <input type="text" placeholder="Prayer, Comfort, Faith…"
-                  value={draft.tag} onChange={(e) => setDraft({ ...draft, tag: e.target.value })}
-                  className="w-full rounded-sm px-3 py-2 text-sm outline-none"
-                  style={inputStyle} />
-              </label>
-            </div>
-
-            <label className="block">
-              <span className="block text-[10px] tracking-[0.2em] uppercase mb-1"
-                style={{ color: `${C.ink}66`, fontFamily: FONT_SANS, fontWeight: 600 }}>
-                Your Note
-              </span>
-              <textarea rows={5} placeholder="Write your thought, question, or insight…"
-                value={draft.body} onChange={(e) => setDraft({ ...draft, body: e.target.value })}
-                className="w-full rounded-sm px-3 py-2 text-sm outline-none resize-none"
-                style={{ ...inputStyle, lineHeight: '1.7' }} />
-            </label>
-
-            {saveError && (
-              <p className="text-xs" style={{ fontFamily: FONT_SANS, color: C.rose }}>
-                Could not save your note. Please try again.
-              </p>
-            )}
-            <div className="flex justify-end">
-              <Button onClick={() => void saveNote()} variant="solid" size="sm" disabled={!draft.body.trim()}>
-                save note
-              </Button>
-            </div>
-          </div>
+        <div className="mb-6">
+          <NoteComposer
+            user={user}
+            studies={studies.filter((s) => s !== 'All Studies')}
+            onCancel={() => setDrafting(false)}
+            onSaved={(created) => {
+              setNotes((prev) => [created, ...prev])
+              setDrafting(false)
+            }}
+          />
         </div>
       )}
 

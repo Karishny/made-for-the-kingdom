@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, Fragment } from 'react'
+import { useState, useMemo, useEffect, Fragment, useRef } from 'react'
 import { ISAIAH_CHAPTERS, PARTS, type BibleVersion, type ChapterData } from '@/data/isaiah'
 import { KJV_ISAIAH } from '@/data/kjvIsaiah'
 import { getNKJVChapter } from '@/lib/nkjv'
@@ -16,12 +16,14 @@ import {
   getNextWeek,
   type StudyWeek,
   type ResourceType,
+  type VideoResource,
   type CompletedResources,
 } from '@/data/studyWeeks'
 import Button from '@/components/Button'
-import { useUser } from '@/context/UserContext'
+import NoteComposer from '@/components/NoteComposer'
+import { useUser, type User } from '@/context/UserContext'
 import { loadProgress, saveProgress, loadChapters, saveChapters, loadResources, saveResources, loadDiscussionDone, saveDiscussionDone } from '@/lib/storage'
-import { createNote, listNotes, type StudyNote, type NewNote } from '@/lib/notesApi'
+import { createNote, listNotes, type StudyNote } from '@/lib/notesApi'
 import { getDiscussionQuestions } from '@/data/discussionQuestions'
 import type { AppRoute } from '@/lib/router'
 
@@ -32,6 +34,13 @@ const C = {
 }
 
 const VERSIONS: BibleVersion[] = ['KJV', 'NKJV', 'ESV', 'NIV']
+
+const VERSION_LABELS: Record<BibleVersion, string> = {
+  KJV: 'King James Version',
+  NKJV: 'New King James Version',
+  ESV: 'English Standard Version',
+  NIV: 'New International Version',
+}
 
 const PART_FIRST: Record<1 | 2 | 3, number> = { 1: 1, 2: 40, 3: 56 }
 
@@ -197,10 +206,8 @@ function BreakDivider({ color = C.ink }: { color?: string }) {
 
 function ProgressTracker({
   completedWeeks,
-  onPartClick,
 }: {
   completedWeeks: Set<string>
-  onPartClick: (part: 1 | 2 | 3) => void
 }) {
   const completed = STUDY_PARTS.reduce(
     (n, p) => n + p.weeks.filter((w) => completedWeeks.has(weekKey(p.part, w.number))).length,
@@ -255,51 +262,62 @@ function ProgressTracker({
                 style={{ width: `${overallPct}%`, background: `linear-gradient(90deg, ${C.terra}, ${C.goldDeep})` }} />
             </div>
           </div>
-
-          {/* Per-part progress */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            {STUDY_PARTS.map((p) => {
-              const total = p.weeks.length
-              const done = p.weeks.filter((w) => completedWeeks.has(weekKey(p.part, w.number))).length
-              const partPct = total === 0 ? 0 : (done / total) * 100
-              const allDone = total > 0 && done === total
-              return (
-                <button key={p.part} onClick={() => onPartClick(p.part)}
-                  className="rounded border p-4 text-left transition-all duration-200 hover:-translate-y-0.5"
-                  style={{
-                    borderColor: `${p.color}40`,
-                    background: allDone ? `${p.color}14` : `${p.color}07`,
-                  }}>
-                  <div className="flex items-center gap-2 mb-2">
-                    <div className="w-1.5 h-1.5 rounded-full" style={{ background: p.color }} />
-                    <span className="text-xs tracking-[0.2em] uppercase"
-                      style={{ color: p.color, fontFamily: "'Source Sans 3', sans-serif", fontWeight: 600 }}>
-                      Part {p.part}
-                    </span>
-                    {allDone && (
-                      <span className="text-[10px] tracking-[0.15em] uppercase ml-auto px-1.5 py-0.5 rounded-sm"
-                        style={{ color: p.color, background: `${p.color}18`, border: `1px solid ${p.color}30`, fontFamily: "'Source Sans 3', sans-serif", fontWeight: 600 }}>
-                        Complete
-                      </span>
-                    )}
-                  </div>
-                  <p style={{ fontFamily: "'Fraunces', serif", fontSize: '0.95rem', fontWeight: 400, color: C.ink, marginBottom: '6px' }}>
-                    {p.label}
-                  </p>
-                  <p className="text-xs mb-3" style={{ fontFamily: "'Source Sans 3', sans-serif", color: `${C.ink}66` }}>
-                    {done} / {total} weeks · Isaiah {p.chaptersLabel}
-                  </p>
-                  <div className="h-1.5 rounded-sm overflow-hidden" style={{ background: `${p.color}14` }}>
-                    <div className="h-full transition-all duration-500"
-                      style={{ width: `${partPct}%`, background: p.color }} />
-                  </div>
-                </button>
-              )
-            })}
-          </div>
         </div>
       </div>
     </section>
+  )
+}
+
+// Part 1 / Part 2 / Part 3 progress cards shown on the study landing, beneath
+// the Study Progress header and the Where-You-Left-Off action block.
+function PartProgressCards({
+  completedWeeks,
+  onPartClick,
+}: {
+  completedWeeks: Set<string>
+  onPartClick: (part: 1 | 2 | 3) => void
+}) {
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+      {STUDY_PARTS.map((p) => {
+        const total = p.weeks.length
+        const done = p.weeks.filter((w) => completedWeeks.has(weekKey(p.part, w.number))).length
+        const partPct = total === 0 ? 0 : (done / total) * 100
+        const allDone = total > 0 && done === total
+        return (
+          <button key={p.part} onClick={() => onPartClick(p.part)}
+            className="rounded border p-4 text-left transition-all duration-200 hover:-translate-y-0.5"
+            style={{
+              borderColor: `${p.color}40`,
+              background: allDone ? `${p.color}14` : `${p.color}07`,
+            }}>
+            <div className="flex items-center gap-2 mb-2">
+              <div className="w-1.5 h-1.5 rounded-full" style={{ background: p.color }} />
+              <span className="text-xs tracking-[0.2em] uppercase"
+                style={{ color: p.color, fontFamily: "'Source Sans 3', sans-serif", fontWeight: 600 }}>
+                Part {p.part}
+              </span>
+              {allDone && (
+                <span className="text-[10px] tracking-[0.15em] uppercase ml-auto px-1.5 py-0.5 rounded-sm"
+                  style={{ color: p.color, background: `${p.color}18`, border: `1px solid ${p.color}30`, fontFamily: "'Source Sans 3', sans-serif", fontWeight: 600 }}>
+                  Complete
+                </span>
+              )}
+            </div>
+            <p style={{ fontFamily: "'Fraunces', serif", fontSize: '0.95rem', fontWeight: 400, color: C.ink, marginBottom: '6px' }}>
+              {p.label}
+            </p>
+            <p className="text-xs mb-3" style={{ fontFamily: "'Source Sans 3', sans-serif", color: `${C.ink}66` }}>
+              {done} / {total} weeks · Isaiah {p.chaptersLabel}
+            </p>
+            <div className="h-1.5 rounded-sm overflow-hidden" style={{ background: `${p.color}14` }}>
+              <div className="h-full transition-all duration-500"
+                style={{ width: `${partPct}%`, background: p.color }} />
+            </div>
+          </button>
+        )
+      })}
+    </div>
   )
 }
 
@@ -583,7 +601,57 @@ function PartOverview({
   )
 }
 
+function youtubeThumb(url: string): string {
+  const m = url.match(/(?:youtu\.be\/|watch\?v=)([A-Za-z0-9_-]{11})/)
+  return m ? `https://i.ytimg.com/vi/${m[1]}/hqdefault.jpg` : ''
+}
+
+function VideoCard({ video, color }: { video: VideoResource; color: string }) {
+  return (
+    <a href={video.url} target="_blank" rel="noopener noreferrer"
+      aria-label={`Watch ${video.title}`}
+      className="group flex-shrink-0 w-[240px] snap-start rounded-sm border overflow-hidden transition-all duration-200 hover:-translate-y-0.5"
+      style={{ borderColor: `${color}30`, background: `${color}05`, opacity: 0.95 }}>
+      <div className="relative aspect-video overflow-hidden" style={{ background: `${color}10` }}>
+        {youtubeThumb(video.url) ? (
+          <img src={youtubeThumb(video.url)} alt="" loading="lazy"
+            className="absolute inset-0 h-full w-full object-cover" style={{ opacity: 0.92 }} />
+        ) : null}
+        <span className="absolute inset-0 flex items-center justify-center">
+          <span className="w-9 h-9 rounded-full flex items-center justify-center transition-transform duration-200 group-hover:scale-110"
+            style={{ background: 'rgba(247,246,242,0.92)', color, boxShadow: '0 1px 8px rgba(46,45,42,0.18)' }}>
+            <svg width="11" height="11" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M8 5.5 V18.5 L18 12 Z" fill="currentColor" />
+            </svg>
+          </span>
+        </span>
+      </div>
+      <p className="text-xs leading-snug p-3" style={{ fontFamily: "'Fraunces', serif", color: C.ink, fontWeight: 400 }}>
+        {video.title}
+      </p>
+    </a>
+  )
+}
+
+function CarouselArrow({ color, dir, onClick }: { color: string; dir: 'left' | 'right'; onClick: () => void }) {
+  return (
+    <button type="button" onClick={onClick}
+      aria-label={dir === 'left' ? 'Previous videos' : 'Next videos'}
+      className="flex-shrink-0 flex items-center justify-center rounded-full transition-all duration-150 hover:scale-105"
+      style={{ width: 26, height: 26, border: `1px solid ${color}40`, color, background: `${color}08` }}>
+      <svg width="10" height="10" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+        {dir === 'left'
+          ? <path d="M10 3 L5 8 L10 13" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+          : <path d="M6 3 L11 8 L6 13" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />}
+      </svg>
+    </button>
+  )
+}
+
 function ResourceCard({ resource, color, done, onToggle }: { resource: StudyWeek['resources'][number]; color: string; done: boolean; onToggle: () => void }) {
+  const scroller = useRef<HTMLDivElement>(null)
+  const videos = resource.type === 'video' && resource.videos && resource.videos.length > 0 ? resource.videos : null
+  const scrollBy = (n: number) => scroller.current?.scrollBy({ left: n, behavior: 'smooth' })
   const body = (
     <>
       <div className="flex items-start justify-between gap-3 mb-3">
@@ -595,25 +663,49 @@ function ResourceCard({ resource, color, done, onToggle }: { resource: StudyWeek
           <span className="text-[10px] tracking-[0.14em] uppercase px-2 py-0.5 rounded-sm"
             style={{
               fontFamily: "'Source Sans 3', sans-serif", fontWeight: 600,
-              color: done ? C.bg : (resource.url ? color : `${C.ink}55`),
-              background: done ? color : (resource.url ? `${color}10` : `${C.ink}08`),
-              border: `1px solid ${done ? color : (resource.url ? `${color}35` : `${C.ink}18`)}`,
+              color: done ? C.bg : ((resource.url || videos) ? color : `${C.ink}55`),
+              background: done ? color : ((resource.url || videos) ? `${color}10` : `${C.ink}08`),
+              border: `1px solid ${done ? color : ((resource.url || videos) ? `${color}35` : `${C.ink}18`)}`,
             }}>
-            {done ? 'Done' : (resource.url ? 'Watch now' : 'Coming soon')}
+            {done ? 'Done' : ((resource.url || videos) ? 'Watch now' : 'Coming soon')}
           </span>
           <CompleteToggle done={done} color={color} onToggle={onToggle} circle />
         </div>
       </div>
-      <p className="text-xs tracking-[0.18em] uppercase mb-1"
-        style={{ color: color, fontFamily: "'Source Sans 3', sans-serif", fontWeight: 600 }}>
-        {resource.label}
-      </p>
-      <p className="text-xs italic" style={{ fontFamily: "'Fraunces', serif", color: `${C.ink}66` }}>
+      {videos ? (
+        <div className="flex items-center justify-between gap-3 mb-1">
+          <p className="text-xs tracking-[0.18em] uppercase"
+            style={{ color: color, fontFamily: "'Source Sans 3', sans-serif", fontWeight: 600 }}>
+            {resource.label}
+          </p>
+          {videos.length > 1 && (
+            <div className="flex items-center gap-1.5 flex-shrink-0">
+              <CarouselArrow color={color} dir="left" onClick={() => scrollBy(-260)} />
+              <CarouselArrow color={color} dir="right" onClick={() => scrollBy(260)} />
+            </div>
+          )}
+        </div>
+      ) : (
+        <p className="text-xs tracking-[0.18em] uppercase mb-1"
+          style={{ color: color, fontFamily: "'Source Sans 3', sans-serif", fontWeight: 600 }}>
+          {resource.label}
+        </p>
+      )}
+      <p className={`text-xs italic ${videos ? 'mb-3' : ''}`} style={{ fontFamily: "'Fraunces', serif", color: `${C.ink}66` }}>
         {resource.placeholder}
       </p>
+      {videos && (
+        <div ref={scroller}
+          className="flex gap-3 overflow-x-auto scroll-smooth snap-x snap-mandatory pb-1 [&::-webkit-scrollbar]:hidden"
+          style={{ scrollbarWidth: 'none' }}>
+          {videos.map((v) => (
+            <VideoCard key={v.url} video={v} color={color} />
+          ))}
+        </div>
+      )}
     </>
   )
-  if (resource.url) {
+  if (resource.url && !videos) {
     return (
       <a href={resource.url} target="_blank" rel="noopener noreferrer"
         className="block rounded border p-5 transition-all duration-200 hover:-translate-y-0.5"
@@ -678,7 +770,8 @@ function WeekView({
   onToggleResource,
   onToggleCompleteChapter,
   onToggleDiscussion,
-  onAddNote,
+  user,
+  onOpenLogin,
   onViewNotes,
   onPrevWeek,
   onNextWeek,
@@ -695,7 +788,8 @@ function WeekView({
   onToggleResource: (type: ResourceType) => void
   onToggleCompleteChapter: (n: number) => void
   onToggleDiscussion: () => void
-  onAddNote: (prefill: Partial<NewNote>) => void
+  user: User | null
+  onOpenLogin: () => void
   onViewNotes: () => void
   onPrevWeek: () => void
   onNextWeek: () => void
@@ -714,6 +808,9 @@ function WeekView({
   const questions = getDiscussionQuestions(weekNumber)
   const discussionKeyValue = weekKey(part, weekNumber)
   const discussionIsDone = discussionDone.has(discussionKeyValue)
+  const [noteOpen, setNoteOpen] = useState(false)
+  const [noteSaved, setNoteSaved] = useState(false)
+  const noteScripture = `Isaiah ${week.chapterStart}–${week.chapterEnd}`
 
   return (
     <section className="mb-14">
@@ -879,10 +976,7 @@ function WeekView({
               </p>
             </div>
             <div className="flex items-center gap-2 flex-shrink-0">
-              <Button size="sm" tone={accent} onClick={() => onAddNote({
-                study: 'Isaiah', part, week: weekNumber,
-                scripture: `Isaiah ${week.chapterStart}–${week.chapterEnd}`,
-              })}>
+              <Button size="sm" tone={accent} onClick={() => setNoteOpen(true)}>
                 + add a note
               </Button>
               <Button size="sm" onClick={onViewNotes}>
@@ -890,6 +984,49 @@ function WeekView({
               </Button>
             </div>
           </div>
+
+          {noteOpen && (
+            <div className="mt-4">
+              {user ? (
+                <NoteComposer
+                  user={user}
+                  accent={accent}
+                  studies={['Isaiah']}
+                  initialDraft={{ study: 'Isaiah', part, week: weekNumber, scripture: noteScripture }}
+                  onCancel={() => setNoteOpen(false)}
+                  onSaved={() => {
+                    setNoteOpen(false)
+                    setNoteSaved(true)
+                    window.setTimeout(() => setNoteSaved(false), 2800)
+                  }}
+                />
+              ) : (
+                <div className="rounded border px-5 py-4 text-center"
+                  style={{ borderColor: `${accent}40`, background: `${accent}05` }}>
+                  <p className="text-sm mb-3" style={{ fontFamily: "'Source Sans 3', sans-serif", color: `${C.ink}77` }}>
+                    Log in to add a note to this week's study.
+                  </p>
+                  <div className="flex items-center justify-center gap-2">
+                    <Button size="sm" tone={accent} onClick={onOpenLogin}>
+                      log in
+                    </Button>
+                    <Button size="sm" onClick={() => setNoteOpen(false)}>
+                      cancel
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {!noteOpen && noteSaved && (
+            <div className="note-fade-in mt-4 rounded border px-5 py-3"
+              style={{ borderColor: `${accent}40`, background: `${accent}05` }}>
+              <p className="text-sm" style={{ fontFamily: "'Source Sans 3', sans-serif", color: accent }}>
+                ✓ note saved — it's now in the group notes.
+              </p>
+            </div>
+          )}
         </div>
 
         {/* Read the Chapters — secondary */}
@@ -909,7 +1046,7 @@ function WeekView({
               const done = completedChapters.has(n)
               return (
                 <div key={n}
-                  className="flex items-center gap-3 rounded border px-4 py-3"
+                  className="flex flex-wrap items-center gap-3 rounded border px-4 py-3"
                   style={{ borderColor: `${currentPart.color}30`, background: done ? `${currentPart.color}12` : `${currentPart.color}06` }}>
                   <span className="w-9 h-9 flex-shrink-0 flex items-center justify-center rounded-sm"
                     style={{ background: `${currentPart.color}20`, color: currentPart.color, fontFamily: "'Fraunces', serif", fontSize: '0.95rem', fontWeight: 500 }}>
@@ -929,9 +1066,20 @@ function WeekView({
                     color={currentPart.color}
                     onToggle={() => onToggleCompleteChapter(n)}
                   />
-                  <Button size="sm" tone={currentPart.color} onClick={() => onChapter(n)}>
-                    read →
-                  </Button>
+                  <div className="flex flex-wrap items-center justify-end gap-1 flex-shrink-0 max-w-full">
+                    {VERSIONS.map((v) => {
+                      const href = getChapterTranslationLink(n)?.translations[v]
+                      if (!href) return null
+                      return (
+                        <a key={v} href={href} target="_blank" rel="noopener noreferrer"
+                          aria-label={`Open Isaiah ${n} in ${VERSION_LABELS[v]}`}
+                          className="inline-flex items-center justify-center select-none rounded-full transition-all duration-200 hover:bg-[rgba(217,211,191,0.8)] hover:scale-[0.975] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[rgba(148,155,97,0.5)]"
+                          style={{ fontFamily: "'Fraunces', serif", fontWeight: 300, letterSpacing: '0.1em', height: '2rem', fontSize: '0.7rem', padding: '0 0.4rem', color: '#6B6967', background: 'transparent', border: `1px solid ${currentPart.color}55`, borderRadius: '1.75rem' }}>
+                          {v}
+                        </a>
+                      )
+                    })}
+                  </div>
                 </div>
               )
             })}
@@ -1405,7 +1553,6 @@ export default function StudySection({
   version,
   onOpenLogin,
   onNavigate,
-  onOpenNotesPrefill,
 }: {
   part?: number
   week?: number
@@ -1413,7 +1560,6 @@ export default function StudySection({
   version?: BibleVersion
   onOpenLogin?: () => void
   onNavigate: (route: AppRoute) => void
-  onOpenNotesPrefill?: (prefill: Partial<NewNote>) => void
 }) {
   const { user } = useUser()
   const userId = user?.id ?? 'guest'
@@ -1563,17 +1709,22 @@ export default function StudySection({
       {/* Top: progress tracker (always visible) */}
       <ProgressTracker
         completedWeeks={completedWeeks}
-        onPartClick={handlePartClick}
       />
 
-      {/* Where you left off — shown on the study landing before part selection */}
+      {/* Landing: Where-you-left-off action block, then the part cards */}
       {openPart === null && (
-        <WhereYouLeftOff
-          completedWeeks={completedWeeks}
-          completedChapters={completedChapters}
-          onContinue={handleContinueWeek}
-          onStart={handleStartStudy}
-        />
+        <>
+          <WhereYouLeftOff
+            completedWeeks={completedWeeks}
+            completedChapters={completedChapters}
+            onContinue={handleContinueWeek}
+            onStart={handleStartStudy}
+          />
+          <PartProgressCards
+            completedWeeks={completedWeeks}
+            onPartClick={handlePartClick}
+          />
+        </>
       )}
 
       {/* Breadcrumb / back nav */}
@@ -1638,7 +1789,8 @@ export default function StudySection({
           onToggleResource={(type) => handleToggleResource(openPart, openWeek, type)}
           onToggleCompleteChapter={handleToggleCompleteChapter}
           onToggleDiscussion={() => handleToggleDiscussion(openPart, openWeek)}
-          onAddNote={(prefill) => onOpenNotesPrefill?.(prefill)}
+          user={user}
+          onOpenLogin={() => onOpenLogin?.()}
           onViewNotes={() => onNavigate({ page: 'notes' })}
           onPrevWeek={handlePrevWeek}
           onNextWeek={handleNextWeek}

@@ -65,8 +65,9 @@ export default function StudyLibrary({ onOpenIsaiah }: { onOpenIsaiah: () => voi
           <div className="flex-1 h-px" style={{ background: `${C.goldDeep}33` }} />
         </div>
 
-        <button onClick={onOpenIsaiah}
-          className="group relative w-full rounded border p-7 md:p-9 text-left transition-all duration-300 hover:-translate-y-0.5"
+        <div role="button" tabIndex={0} onClick={onOpenIsaiah}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onOpenIsaiah() } }}
+          className="group relative w-full rounded border p-7 md:p-9 text-left transition-all duration-300 hover:-translate-y-0.5 cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[rgba(148,155,97,0.5)]"
           style={{ borderColor: `${C.goldDeep}45`, background: `linear-gradient(160deg, #F8F6F0 0%, #F3F1EA 55%, #F7F6F2 100%)` }}>
           <CornerMark className="absolute top-0 left-0" />
           <CornerMark className="absolute top-0 right-0 rotate-90" />
@@ -93,12 +94,12 @@ export default function StudyLibrary({ onOpenIsaiah }: { onOpenIsaiah: () => voi
               </p>
             </div>
             <div className="flex-shrink-0">
-              <Button size="lg" variant="solid" onClick={onOpenIsaiah}>
+              <Button size="lg" variant="solid" onClick={(e) => { e.stopPropagation(); onOpenIsaiah() }}>
                 start the study →
               </Button>
             </div>
           </div>
-        </button>
+        </div>
       </div>
 
       {/* Coming soon studies */}

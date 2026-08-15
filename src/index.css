@@ -68,3 +68,28 @@ body {
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: #cfac2966; border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: #cfac29aa; }
+
+/* ─── Note UI animations ───
+   Short, calm ease-out so dropdowns and collapsible note filters feel soft on
+   touch screens. Deliberately subtle: a small fade plus a gentle slide, no
+   scaling or bounce. */
+
+@keyframes note-drop-in {
+  from {
+    opacity: 0;
+    transform: translateY(-3px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.note-drop-panel {
+  animation: note-drop-in 140ms ease-out;
+  transform-origin: top center;
+}
+
+.note-fade-in {
+  animation: note-drop-in 160ms ease-out;
+}
