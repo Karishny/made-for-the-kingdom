@@ -63,6 +63,7 @@ export default function NotesSection({ onOpenLogin }: { onOpenLogin: () => void 
   const [drafting, setDrafting] = useState(false)
   const [filtersOpen, setFiltersOpen] = useState(false)
   const [activeNote, setActiveNote] = useState<string | null>(null)
+  const [pendingDelete, setPendingDelete] = useState<string | null>(null)
   const [studyFilter, setStudyFilter] = useState('All Studies')
   const [typeFilter, setTypeFilter] = useState('All Types')
   const [search, setSearch] = useState('')
@@ -96,6 +97,7 @@ export default function NotesSection({ onOpenLogin }: { onOpenLogin: () => void 
   function openNote(id: string) {
     setActiveNote((cur) => (cur === id ? null : id))
     setReplyBody('')
+    setPendingDelete(null)
   }
 
   async function submitReply() {
@@ -348,13 +350,33 @@ export default function NotesSection({ onOpenLogin }: { onOpenLogin: () => void 
                       </span>
                       {expanded && note.authorId === user?.id && (
                         <button
-                          onClick={(e) => { e.stopPropagation(); deleteNote(note.id) }}
+                          onClick={(e) => { e.stopPropagation(); setPendingDelete(note.id) }}
                           className="text-xs px-2 py-0.5 rounded-sm transition-all duration-150"
                           style={{ color: C.rose, border: `1px solid ${C.rose}35`, fontFamily: FONT_SANS, background: `${C.rose}08` }}>
                           Delete
                         </button>
                       )}
                     </div>
+
+                    {/* Delete confirmation */}
+                    {expanded && pendingDelete === note.id && (
+                      <div className="mt-3 rounded border px-4 py-3 flex items-center justify-between gap-3 flex-wrap"
+                        style={{ borderColor: `${C.rose}30`, background: `${C.rose}06` }}
+                        onClick={(e) => e.stopPropagation()}>
+                        <p className="text-sm"
+                          style={{ fontFamily: FONT_SANS, color: `${C.ink}88`, lineHeight: '1.5' }}>
+                          Are you sure you want to delete this note?
+                        </p>
+                        <div className="flex items-center gap-2 flex-shrink-0">
+                          <Button size="sm" onClick={() => setPendingDelete(null)}>
+                            cancel
+                          </Button>
+                          <Button size="sm" variant="solid" onClick={() => { setPendingDelete(null); void deleteNote(note.id) }}>
+                            delete
+                          </Button>
+                        </div>
+                      </div>
+                    )}
 
                     {/* Discussion / replies */}
                     {expanded && (

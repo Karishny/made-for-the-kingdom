@@ -352,14 +352,23 @@ function WeekStrip({
           return (
             <Fragment key={week.number}>
               {breaks.has(week.number) && (
-                <div className="flex-shrink-0 flex items-center gap-2 px-1.5">
-                  <div className="h-px w-5" style={{ background: `${C.ink}22` }} />
-                  <span className="text-[9px] tracking-[0.3em] uppercase"
-                    style={{ fontFamily: "'Fraunces', serif", color: `${C.ink}44`, fontWeight: 400 }}>
-                    break
-                  </span>
-                  <div className="h-px w-5" style={{ background: `${C.ink}22` }} />
-                </div>
+                <>
+                  <div className="hidden md:flex flex-shrink-0 items-center gap-2 px-1.5">
+                    <div className="h-px w-5" style={{ background: `${C.ink}22` }} />
+                    <span className="text-[9px] tracking-[0.3em] uppercase"
+                      style={{ fontFamily: "'Fraunces', serif", color: `${C.ink}44`, fontWeight: 400 }}>
+                      break
+                    </span>
+                    <div className="h-px w-5" style={{ background: `${C.ink}22` }} />
+                  </div>
+                  <div className="md:hidden flex-shrink-0 flex flex-col items-center justify-center rounded border px-2.5 py-2"
+                    style={{ borderColor: `${C.ink}22`, background: `${C.ink}06` }}>
+                    <span className="text-[9px] tracking-[0.3em] uppercase"
+                      style={{ fontFamily: "'Fraunces', serif", color: `${C.ink}44`, fontWeight: 400 }}>
+                      break
+                    </span>
+                  </div>
+                </>
               )}
               <button
                 onClick={() => onSelect(week.number)}
@@ -660,7 +669,7 @@ function ResourceCard({ resource, color, done, onToggle }: { resource: StudyWeek
           <ResourceIcon type={resource.type} color={color} />
         </div>
         <div className="flex items-center gap-2">
-          <span className="text-[10px] tracking-[0.14em] uppercase px-2 py-0.5 rounded-sm"
+          <span className={`text-[10px] tracking-[0.14em] uppercase px-2 py-0.5 rounded-sm ${videos ? 'hidden md:inline-block' : ''}`}
             style={{
               fontFamily: "'Source Sans 3', sans-serif", fontWeight: 600,
               color: done ? C.bg : ((resource.url || videos) ? color : `${C.ink}55`),
@@ -816,12 +825,12 @@ function WeekView({
     <section className="mb-14">
       <div className="rounded border overflow-hidden" style={{ borderColor: `${currentPart.color}40` }}>
         {/* Header */}
-        <div className="p-6 flex items-center gap-4 flex-wrap"
+        <div className="p-6 flex items-center gap-4 flex-wrap justify-between sm:justify-start"
           style={{ background: `${currentPart.color}10`, borderBottom: `1px solid ${currentPart.color}25` }}>
-          <Button size="sm" tone={currentPart.color} onClick={onBack}>
+          <Button size="sm" tone={currentPart.color} onClick={onBack} className="order-1 sm:order-none">
             ← part {currentPart.part}
           </Button>
-          <div className="flex-1 min-w-0">
+          <div className="flex-1 min-w-0 order-3 basis-full sm:order-none sm:basis-auto">
             <p className="text-xs tracking-[0.2em] uppercase mb-1"
               style={{ color: currentPart.color, fontFamily: "'Source Sans 3', sans-serif", fontWeight: 600 }}>
               Week {week.number} · {week.day} Session
@@ -852,7 +861,9 @@ function WeekView({
               <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M6 3 L11 8 L6 13" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" /></svg>
             </button>
           </div>
-          <StatusChip status={status} color={currentPart.color} />
+          <div className="flex-shrink-0 order-2 sm:order-none">
+            <StatusChip status={status} color={currentPart.color} />
+          </div>
         </div>
 
         {/* Week selector + previous / next — mobile only; desktop keeps focus on the week */}
@@ -888,12 +899,12 @@ function WeekView({
 
         {/* Weekly Resources — primary */}
         <div className="px-6 py-6" style={{ borderBottom: `1px solid ${currentPart.color}18` }}>
-          <div className="flex items-baseline gap-4 mb-4">
+          <div className="flex items-baseline gap-4 mb-4 flex-wrap">
             <h4 style={{ fontFamily: "'Fraunces', serif", fontSize: '1.1rem', fontWeight: 400, color: C.ink }}>
               Weekly Resources
             </h4>
             <div className="flex-1 h-px" style={{ background: `${C.ink}15` }} />
-            <span className="text-xs italic" style={{ fontFamily: "'Fraunces', serif", color: `${C.ink}55` }}>
+            <span className="text-xs italic basis-full sm:basis-auto" style={{ fontFamily: "'Fraunces', serif", color: `${C.ink}55` }}>
               Complete any one to mark this week complete
             </span>
           </div>
@@ -912,12 +923,12 @@ function WeekView({
 
         {/* Discussion Questions — reflect on the week before reading */}
         <div className="px-6 py-6" style={{ borderBottom: `1px solid ${currentPart.color}18` }}>
-          <div className="flex items-baseline gap-4 mb-4">
+          <div className="flex items-baseline gap-4 mb-4 flex-wrap">
             <h4 style={{ fontFamily: "'Fraunces', serif", fontSize: '1.05rem', fontWeight: 400, color: C.ink }}>
               Discussion Questions
             </h4>
             <div className="flex-1 h-px" style={{ background: `${C.ink}15` }} />
-            <span className="text-xs italic" style={{ fontFamily: "'Fraunces', serif", color: `${C.ink}55` }}>
+            <span className="text-xs italic basis-full sm:basis-auto" style={{ fontFamily: "'Fraunces', serif", color: `${C.ink}55` }}>
               Isaiah {week.chapterStart}–{week.chapterEnd}
             </span>
           </div>
@@ -975,7 +986,7 @@ function WeekView({
                 Have a thought, question, verse, or insight from this week's reading? Share it with the group.
               </p>
             </div>
-            <div className="flex items-center gap-2 flex-shrink-0">
+            <div className="w-full sm:w-auto flex flex-wrap items-center gap-2 flex-shrink-0">
               <Button size="sm" tone={accent} onClick={() => setNoteOpen(true)}>
                 + add a note
               </Button>
@@ -1006,7 +1017,7 @@ function WeekView({
                   <p className="text-sm mb-3" style={{ fontFamily: "'Source Sans 3', sans-serif", color: `${C.ink}77` }}>
                     Log in to add a note to this week's study.
                   </p>
-                  <div className="flex items-center justify-center gap-2">
+                  <div className="flex flex-wrap items-center justify-center gap-2">
                     <Button size="sm" tone={accent} onClick={onOpenLogin}>
                       log in
                     </Button>
@@ -1031,12 +1042,12 @@ function WeekView({
 
         {/* Read the Chapters — secondary */}
         <div className="px-6 py-6" style={{ borderBottom: `1px solid ${currentPart.color}18` }}>
-          <div className="flex items-baseline gap-4 mb-4">
+          <div className="flex items-baseline gap-4 mb-4 flex-wrap">
             <h4 style={{ fontFamily: "'Fraunces', serif", fontSize: '1.05rem', fontWeight: 400, color: C.ink }}>
               Read the Chapters
             </h4>
             <div className="flex-1 h-px" style={{ background: `${C.ink}15` }} />
-            <span className="text-xs italic" style={{ fontFamily: "'Fraunces', serif", color: `${C.ink}55` }}>
+            <span className="text-xs italic basis-full sm:basis-auto" style={{ fontFamily: "'Fraunces', serif", color: `${C.ink}55` }}>
               {week.chapterNumbers.length} chapters · optional
             </span>
           </div>
@@ -1046,13 +1057,13 @@ function WeekView({
               const done = completedChapters.has(n)
               return (
                 <div key={n}
-                  className="flex flex-wrap items-center gap-3 rounded border px-4 py-3"
+                  className="flex flex-wrap items-center gap-3 justify-between sm:justify-start rounded border px-4 py-3"
                   style={{ borderColor: `${currentPart.color}30`, background: done ? `${currentPart.color}12` : `${currentPart.color}06` }}>
-                  <span className="w-9 h-9 flex-shrink-0 flex items-center justify-center rounded-sm"
+                  <span className="w-9 h-9 flex-shrink-0 flex items-center justify-center rounded-sm order-1 sm:order-none"
                     style={{ background: `${currentPart.color}20`, color: currentPart.color, fontFamily: "'Fraunces', serif", fontSize: '0.95rem', fontWeight: 500 }}>
                     {n}
                   </span>
-                  <div className="flex-1 min-w-0">
+                  <div className="flex-1 min-w-0 order-3 basis-full sm:order-none sm:basis-auto">
                     <p style={{ fontFamily: "'Fraunces', serif", fontSize: '0.95rem', fontWeight: 400, color: C.ink }}>
                       {ch.title}
                     </p>
@@ -1061,12 +1072,14 @@ function WeekView({
                       {ch.theme}
                     </p>
                   </div>
-                  <CompleteToggle
-                    done={done}
-                    color={currentPart.color}
-                    onToggle={() => onToggleCompleteChapter(n)}
-                  />
-                  <div className="flex flex-wrap items-center justify-end gap-1 flex-shrink-0 max-w-full">
+                  <div className="flex-shrink-0 order-2 sm:order-none">
+                    <CompleteToggle
+                      done={done}
+                      color={currentPart.color}
+                      onToggle={() => onToggleCompleteChapter(n)}
+                    />
+                  </div>
+                  <div className="flex flex-wrap items-center justify-end gap-1 flex-shrink-0 max-w-full order-4 sm:order-none">
                     {VERSIONS.map((v) => {
                       const href = getChapterTranslationLink(n)?.translations[v]
                       if (!href) return null
@@ -1706,25 +1719,29 @@ export default function StudySection({
 
   return (
     <div>
-      {/* Top: progress tracker (always visible) */}
-      <ProgressTracker
-        completedWeeks={completedWeeks}
-      />
-
-      {/* Landing: Where-you-left-off action block, then the part cards */}
+      {/* Landing: Where-you-left-off / Ready-to-begin action block (study landing only) */}
       {openPart === null && (
-        <>
-          <WhereYouLeftOff
-            completedWeeks={completedWeeks}
-            completedChapters={completedChapters}
-            onContinue={handleContinueWeek}
-            onStart={handleStartStudy}
-          />
-          <PartProgressCards
-            completedWeeks={completedWeeks}
-            onPartClick={handlePartClick}
-          />
-        </>
+        <WhereYouLeftOff
+          completedWeeks={completedWeeks}
+          completedChapters={completedChapters}
+          onContinue={handleContinueWeek}
+          onStart={handleStartStudy}
+        />
+      )}
+
+      {/* Study Progress tracker (always visible, except hidden on mobile inside a week) */}
+      <div className={openWeek !== null ? 'hidden md:block' : undefined}>
+        <ProgressTracker
+          completedWeeks={completedWeeks}
+        />
+      </div>
+
+      {/* Landing: then the part cards */}
+      {openPart === null && (
+        <PartProgressCards
+          completedWeeks={completedWeeks}
+          onPartClick={handlePartClick}
+        />
       )}
 
       {/* Breadcrumb / back nav */}
