@@ -8,6 +8,7 @@ import SiteBackdrop from "@/components/SiteBackdrop"
 import PwaSplash from "@/components/PwaSplash"
 import Button from "@/components/Button"
 import MadeFtk from "@/components/MadeFtk"
+import MadeForTheKingdom from "@/components/MadeForTheKingdom"
 import { OrnamentalDivider } from "@/components/SectionHeader"
 import { C, P, FONT_SERIF, FONT_SANS } from "@/theme"
 import { useRoute } from "@/lib/router"
@@ -62,22 +63,13 @@ export default function App() {
       {isHome && (
         <section className="relative max-w-6xl mx-auto px-6 pt-14 md:pt-20 pb-4 md:pb-8 text-center">
           {/* Brand eyebrow — introduces the paragraph below */}
-          <h1
+          <MadeForTheKingdom
             style={{
-              fontFamily: FONT_SERIF,
-              fontSize: "clamp(2.4rem, 6.5vw, 5.6rem)",
-              fontWeight: 300,
-              letterSpacing: "-0.02em",
-              lineHeight: 1.2,
-              color: P.titleMuted,
               maxWidth: "min(60vw, 1100px)",
               margin: "0 auto",
               marginTop: "clamp(1rem, 3.5vw, 2.5rem)",
             }}
-          >
-            made for the{" "}
-            <span style={{ color: P.gold, fontStyle: "italic" }}>kingdom</span>
-          </h1>
+          />
 
           <div className="mx-auto max-w-4xl lg:max-w-5xl mt-10 md:mt-14">
             <p

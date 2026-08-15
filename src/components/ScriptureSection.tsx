@@ -17,19 +17,20 @@ import {
   type StudyWeek,
   type ResourceType,
   type VideoResource,
+  type PodcastResource,
   type CompletedResources,
 } from '@/data/studyWeeks'
 import Button from '@/components/Button'
 import NoteComposer from '@/components/NoteComposer'
 import { useUser, type User } from '@/context/UserContext'
 import { loadProgress, saveProgress, loadChapters, saveChapters, loadResources, saveResources, loadDiscussionDone, saveDiscussionDone } from '@/lib/storage'
-import { createNote, listNotes, type StudyNote } from '@/lib/notesApi'
+import { createNote, listNotes, subscribeNotes, type StudyNote } from '@/lib/notesApi'
 import { getDiscussionQuestions } from '@/data/discussionQuestions'
 import type { AppRoute } from '@/lib/router'
 
 const C = {
   bg: '#F7F6F2', ink: '#2e2d2a', terra: '#a85b31', terraDark: '#763f21',
-  goldDeep: '#cfac29', lavender: '#927f9b', olive: '#949b61',
+  goldDeep: '#cfac29', lavender: '#927f9b', olive: '#949b61', oliveMid: '#6E7450',
   rose: '#a84c5c', mauve: '#c57c89', plum: '#332a37',
 }
 
@@ -619,7 +620,7 @@ function VideoCard({ video, color }: { video: VideoResource; color: string }) {
   return (
     <a href={video.url} target="_blank" rel="noopener noreferrer"
       aria-label={`Watch ${video.title}`}
-      className="group flex-shrink-0 w-[240px] snap-start rounded-sm border overflow-hidden transition-all duration-200 hover:-translate-y-0.5"
+      className="group flex-shrink-0 w-[240px] snap-start rounded-sm border overflow-hidden transition-all duration-200 hover:scale-[1.02]"
       style={{ borderColor: `${color}30`, background: `${color}05`, opacity: 0.95 }}>
       <div className="relative aspect-video overflow-hidden" style={{ background: `${color}10` }}>
         {youtubeThumb(video.url) ? (
@@ -642,10 +643,10 @@ function VideoCard({ video, color }: { video: VideoResource; color: string }) {
   )
 }
 
-function CarouselArrow({ color, dir, onClick }: { color: string; dir: 'left' | 'right'; onClick: () => void }) {
+function CarouselArrow({ color, dir, onClick, label = 'videos' }: { color: string; dir: 'left' | 'right'; onClick: () => void; label?: string }) {
   return (
     <button type="button" onClick={onClick}
-      aria-label={dir === 'left' ? 'Previous videos' : 'Next videos'}
+      aria-label={`${dir === 'left' ? 'Previous' : 'Next'} ${label}`}
       className="flex-shrink-0 flex items-center justify-center rounded-full transition-all duration-150 hover:scale-105"
       style={{ width: 26, height: 26, border: `1px solid ${color}40`, color, background: `${color}08` }}>
       <svg width="10" height="10" viewBox="0 0 16 16" fill="none" aria-hidden="true">
@@ -705,7 +706,7 @@ function ResourceCard({ resource, color, done, onToggle }: { resource: StudyWeek
       </p>
       {videos && (
         <div ref={scroller}
-          className="flex gap-3 overflow-x-auto scroll-smooth snap-x snap-mandatory pb-1 [&::-webkit-scrollbar]:hidden"
+          className="flex gap-3 overflow-x-auto scroll-smooth snap-x snap-mandatory py-1 [&::-webkit-scrollbar]:hidden"
           style={{ scrollbarWidth: 'none' }}>
           {videos.map((v) => (
             <VideoCard key={v.url} video={v} color={color} />
@@ -717,7 +718,7 @@ function ResourceCard({ resource, color, done, onToggle }: { resource: StudyWeek
   if (resource.url && !videos) {
     return (
       <a href={resource.url} target="_blank" rel="noopener noreferrer"
-        className="block rounded border p-5 transition-all duration-200 hover:-translate-y-0.5"
+        className="block rounded border p-5 transition-all duration-200 hover:scale-[1.02]"
         style={{ borderColor: `${color}30`, background: done ? `${color}12` : `${color}05`, opacity: 0.95 }}>
         {body}
       </a>
@@ -727,6 +728,135 @@ function ResourceCard({ resource, color, done, onToggle }: { resource: StudyWeek
     <div className="rounded border p-5"
       style={{ borderColor: `${color}30`, background: done ? `${color}12` : `${color}05`, opacity: 0.95 }}>
       {body}
+    </div>
+  )
+}
+
+// Clean, modern podcast icon: a minimal microphone with subtle sound waves in a
+// soft olive green. Immediately reads as podcast/audio without competing with
+// the episode title. Inline SVG stays crisp at any size.
+function PodcastIcon({ size = 34 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 48 48" fill="none" aria-hidden="true" className="flex-shrink-0">
+      <path d="M18.5 11.5 a5.5 5.5 0 0 1 11 0 v13 a5.5 5.5 0 0 1 -11 0 Z"
+        stroke={C.oliveMid} strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M24 29.5 V35" stroke={C.oliveMid} strokeWidth="1.3" strokeLinecap="round" />
+      <path d="M19 35 H29" stroke={C.oliveMid} strokeWidth="1.3" strokeLinecap="round" />
+      <path d="M12.5 20 a4.5 4.5 0 0 0 0 8" stroke={C.oliveMid} strokeWidth="1.3" strokeLinecap="round" />
+      <path d="M35.5 20 a4.5 4.5 0 0 1 0 8" stroke={C.oliveMid} strokeWidth="1.3" strokeLinecap="round" />
+    </svg>
+  )
+}
+
+// One compact, horizontal podcast card in the carousel: a small circular icon
+// on the left, the title to its right, wrapping naturally and clamped so a long
+// episode title can never overflow the card.
+function PodcastItem({ pod, color }: { pod: PodcastResource; color: string }) {
+  return (
+    <a href={pod.url} target="_blank" rel="noopener noreferrer"
+      aria-label={`Listen: ${pod.title}`}
+      title={pod.title}
+      className="group flex-shrink-0 w-[250px] snap-start flex items-center gap-3 rounded-sm border p-3 transition-all duration-200 hover:scale-[1.02]"
+      style={{ borderColor: `${color}30`, background: `${color}05`, opacity: 0.95 }}>
+      <span className="flex-shrink-0 w-11 h-11 rounded-full flex items-center justify-center"
+        style={{ background: `${color}10`, border: `1px solid ${color}25` }}>
+        <PodcastIcon size={34} />
+      </span>
+      <p className="text-sm leading-snug line-clamp-3"
+        style={{ fontFamily: "'Fraunces', serif", color: C.ink, fontWeight: 400 }}>
+        {pod.title}
+      </p>
+    </a>
+  )
+}
+
+// Week's podcasts as a horizontal carousel, mirroring the video resource card:
+// header icon + listen/done chip + toggle, label row with prev/next arrows, then
+// a snap-scrolling strip of compact podcast cards. New podcasts added to the
+// data simply become another card — nothing is hard-coded to a count.
+function PodcastSection({ resource, color, done, onToggle }: { resource: StudyWeek['resources'][number]; color: string; done: boolean; onToggle: () => void }) {
+  const scroller = useRef<HTMLDivElement>(null)
+  const podcasts = resource.podcasts ?? []
+  const scrollBy = (n: number) => scroller.current?.scrollBy({ left: n, behavior: 'smooth' })
+  const dragRef = useRef<{ x: number; left: number } | null>(null)
+  const movedRef = useRef(false)
+
+  const onPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (e.pointerType !== 'mouse') return
+    dragRef.current = { x: e.clientX, left: scroller.current?.scrollLeft ?? 0 }
+    movedRef.current = false
+    if (scroller.current) scroller.current.style.scrollSnapType = 'none'
+  }
+  const onPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    const d = dragRef.current
+    if (!d || e.pointerType !== 'mouse') return
+    const dx = e.clientX - d.x
+    if (Math.abs(dx) > 5) movedRef.current = true
+    if (scroller.current) scroller.current.scrollLeft = d.left - dx
+  }
+  const endDrag = () => {
+    dragRef.current = null
+    if (scroller.current) scroller.current.style.scrollSnapType = ''
+  }
+  const onClickCapture = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (movedRef.current) {
+      e.preventDefault()
+      e.stopPropagation()
+      movedRef.current = false
+    }
+  }
+
+  return (
+    <div className="rounded border p-5"
+      style={{ borderColor: `${color}30`, background: done ? `${color}12` : `${color}05`, opacity: 0.95 }}>
+      <div className="flex items-start justify-between gap-3 mb-3">
+        <div className="w-10 h-10 rounded-sm flex items-center justify-center flex-shrink-0"
+          style={{ background: `${color}16`, border: `1px solid ${color}30` }}>
+          <ResourceIcon type="podcast" color={color} />
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-[10px] tracking-[0.14em] uppercase px-2 py-0.5 rounded-sm"
+            style={{
+              fontFamily: "'Source Sans 3', sans-serif", fontWeight: 600,
+              color: done ? C.bg : color,
+              background: done ? color : `${color}10`,
+              border: `1px solid ${done ? color : `${color}35`}`,
+            }}>
+            {done ? 'Done' : 'Listen now'}
+          </span>
+          <CompleteToggle done={done} color={color} onToggle={onToggle} circle />
+        </div>
+      </div>
+      <div className="flex items-center justify-between gap-3 mb-1">
+        <p className="text-xs tracking-[0.18em] uppercase"
+          style={{ color, fontFamily: "'Source Sans 3', sans-serif", fontWeight: 600 }}>
+          {resource.label}
+        </p>
+        {podcasts.length > 1 && (
+          <div className="flex items-center gap-1.5 flex-shrink-0">
+            <CarouselArrow color={color} dir="left" label="podcasts" onClick={() => scrollBy(-262)} />
+            <CarouselArrow color={color} dir="right" label="podcasts" onClick={() => scrollBy(262)} />
+          </div>
+        )}
+      </div>
+      <p className="text-xs italic mb-3" style={{ fontFamily: "'Fraunces', serif", color: `${C.ink}66` }}>
+        {resource.placeholder}
+      </p>
+      <div
+        ref={scroller}
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={endDrag}
+        onPointerLeave={endDrag}
+        onPointerCancel={endDrag}
+        onClickCapture={onClickCapture}
+        className="flex gap-3 overflow-x-auto scroll-smooth snap-x snap-mandatory py-1 select-none cursor-grab active:cursor-grabbing [&::-webkit-scrollbar]:hidden"
+        style={{ scrollbarWidth: 'none' }}
+      >
+        {podcasts.map((p) => (
+          <PodcastItem key={p.url} pod={p} color={color} />
+        ))}
+      </div>
     </div>
   )
 }
@@ -909,15 +1039,25 @@ function WeekView({
             </span>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {week.resources.map((r) => (
-              <ResourceCard
-                key={r.type}
-                resource={r}
-                color={currentPart.color}
-                done={doneResources.includes(r.type)}
-                onToggle={() => onToggleResource(r.type)}
-              />
-            ))}
+            {week.resources.map((r) =>
+              r.type === 'podcast' && r.podcasts && r.podcasts.length > 0 ? (
+                <PodcastSection
+                  key={r.type}
+                  resource={r}
+                  color={currentPart.color}
+                  done={doneResources.includes(r.type)}
+                  onToggle={() => onToggleResource(r.type)}
+                />
+              ) : (
+                <ResourceCard
+                  key={r.type}
+                  resource={r}
+                  color={currentPart.color}
+                  done={doneResources.includes(r.type)}
+                  onToggle={() => onToggleResource(r.type)}
+                />
+              ),
+            )}
           </div>
         </div>
 
@@ -1166,15 +1306,24 @@ function ChapterView({
 
   useEffect(() => {
     let cancelled = false
-    listNotes()
-      .then((list) => {
-        if (!cancelled) setChapterNotes(list.filter((n) => n.chapter === chapterNumber))
-      })
-      .catch(() => {})
+    const applyList = (list: StudyNote[]) => {
+      if (!cancelled) setChapterNotes(list.filter((n) => n.chapter === chapterNumber))
+    }
+    if (!user) {
+      setChapterNotes([])
+      return () => {
+        cancelled = true
+      }
+    }
+    listNotes().then(applyList).catch(() => {})
+    const unsubscribe = subscribeNotes(() => {
+      listNotes().then(applyList).catch(() => {})
+    })
     return () => {
       cancelled = true
+      unsubscribe()
     }
-  }, [chapterNumber])
+  }, [chapterNumber, user])
 
   useEffect(() => {
     let cancelled = false
@@ -1399,7 +1548,9 @@ function ChapterView({
           ) : (
             <p className="text-sm italic"
               style={{ fontFamily: "'Fraunces', serif", color: `${C.ink}55` }}>
-              No shared notes on this chapter yet. Be the first to add one.
+              {user
+                ? 'No shared notes on this chapter yet. Be the first to add one.'
+                : 'Sign in to see community notes on this chapter.'}
             </p>
           )}
         </div>
@@ -1437,7 +1588,7 @@ function ChapterView({
   )
 }
 
-function WhereYouLeftOff({
+function StudyProgressCard({
   completedWeeks,
   completedChapters,
   onContinue,
@@ -1505,30 +1656,32 @@ function WhereYouLeftOff({
   const color = getStudyPart(targetPart).color
 
   return (
-    <section className="mb-14">
-      <div className="rounded border overflow-hidden"
+    <section className="mb-8">
+      <div className="relative rounded border overflow-hidden"
         style={{ borderColor: `${color}40`, background: `${color}06` }}>
-        <div className="p-6 md:p-7">
-          <p className="text-xs tracking-[0.3em] uppercase mb-2"
-            style={{ color: C.olive, fontFamily: "'Source Sans 3', sans-serif", fontWeight: 500 }}>
-            {firstTime ? 'Ready to begin' : 'Continue where you left off'}
-          </p>
-
-          {firstTime ? (
-            <>
-              <h3 style={{ fontFamily: "'Fraunces', serif", fontSize: '1.35rem', fontWeight: 300, color: C.ink, lineHeight: 1.2 }}>
-                start the <span style={{ color: color, fontStyle: 'italic' }}>study</span>
-              </h3>
-              <div className="mt-5">
-                <Button size="md" tone={color} onClick={onStart}>
-                  start the study →
-                </Button>
-              </div>
-            </>
-          ) : (
-            <>
-              <div className="flex items-end justify-between gap-4 flex-wrap">
-                <div>
+        <CornerMark className="absolute top-0 left-0" />
+        <CornerMark className="absolute top-0 right-0 rotate-90" />
+        <CornerMark className="absolute bottom-0 left-0 -rotate-90" />
+        <CornerMark className="absolute bottom-0 right-0 rotate-180" />
+        <div className="p-6 md:p-8">
+          <div className="flex items-end justify-between gap-4 flex-wrap">
+            <div>
+              <p className="text-xs tracking-[0.3em] uppercase mb-2"
+                style={{ color: C.olive, fontFamily: "'Source Sans 3', sans-serif", fontWeight: 500 }}>
+                {firstTime ? 'Ready to begin' : 'Continue where you left off'}
+              </p>
+              {firstTime ? (
+                <>
+                  <h3 style={{ fontFamily: "'Fraunces', serif", fontSize: '1.35rem', fontWeight: 300, color: C.ink, lineHeight: 1.2 }}>
+                    start the <span style={{ color: color, fontStyle: 'italic' }}>study</span>
+                  </h3>
+                  <p className="text-xs mt-1"
+                    style={{ fontFamily: "'Source Sans 3', sans-serif", color: `${C.ink}66` }}>
+                    Start your Isaiah study and begin your journey through the book.
+                  </p>
+                </>
+              ) : (
+                <>
                   <h3 style={{ fontFamily: "'Fraunces', serif", fontSize: '1.5rem', fontWeight: 300, color: C.ink, lineHeight: 1.2 }}>
                     Week <span style={{ color: color, fontStyle: 'italic' }}>{targetWeek.number}</span>
                   </h3>
@@ -1536,23 +1689,42 @@ function WhereYouLeftOff({
                     style={{ fontFamily: "'Source Sans 3', sans-serif", color: `${C.ink}66` }}>
                     Isaiah {targetWeek.chapterStart}–{targetWeek.chapterEnd} · {targetWeek.day}
                   </p>
-                </div>
-                <div className="text-right">
-                  <div style={{ fontFamily: "'Fraunces', serif", fontSize: '1.3rem', fontWeight: 500, color: color, lineHeight: 1 }}>
-                    {pct}%
-                  </div>
-                  <p className="text-xs mt-1" style={{ fontFamily: "'Source Sans 3', sans-serif", color: `${C.ink}55`, letterSpacing: '0.08em' }}>
-                    complete
-                  </p>
-                </div>
+                </>
+              )}
+            </div>
+            <div className="text-right">
+              <div style={{ fontFamily: "'Fraunces', serif", fontSize: '1.6rem', fontWeight: 500, color: color, lineHeight: 1 }}>
+                {pct}%
               </div>
-              <div className="mt-5">
-                <Button size="md" tone={color} onClick={() => onContinue(targetPart, targetWeek.number)}>
-                  continue study →
-                </Button>
-              </div>
-            </>
-          )}
+              <p className="text-xs mt-1" style={{ fontFamily: "'Source Sans 3', sans-serif", color: `${C.ink}66`, letterSpacing: '0.1em' }}>
+                complete
+              </p>
+            </div>
+          </div>
+
+          <div className="my-5 max-w-xs mx-auto">
+            <OrnamentalDivider color={C.terra} />
+          </div>
+
+          {/* Progress information — supports the main action */}
+          <div className="mb-6">
+            <div className="flex items-center justify-between mb-1.5">
+              <span className="text-xs" style={{ fontFamily: "'Source Sans 3', sans-serif", color: `${C.ink}66`, letterSpacing: '0.08em' }}>
+                Study Progress
+              </span>
+              <span className="text-xs" style={{ fontFamily: "'Source Sans 3', sans-serif", color: C.terra, fontWeight: 600 }}>
+                {completedCount} of {TOTAL_WEEKS} weeks completed
+              </span>
+            </div>
+            <div className="h-2 rounded-sm overflow-hidden" style={{ background: `${C.ink}10` }}>
+              <div className="h-full transition-all duration-500"
+                style={{ width: `${pct}%`, background: `linear-gradient(90deg, ${C.terra}, ${C.goldDeep})` }} />
+            </div>
+          </div>
+
+          <Button size="md" tone={color} onClick={firstTime ? onStart : () => onContinue(targetPart, targetWeek.number)}>
+            {firstTime ? 'start the study →' : 'continue study →'}
+          </Button>
         </div>
       </div>
     </section>
@@ -1719,9 +1891,9 @@ export default function StudySection({
 
   return (
     <div>
-      {/* Landing: Where-you-left-off / Ready-to-begin action block (study landing only) */}
+      {/* Landing: unified Study Progress + Continue card (landing only) */}
       {openPart === null && (
-        <WhereYouLeftOff
+        <StudyProgressCard
           completedWeeks={completedWeeks}
           completedChapters={completedChapters}
           onContinue={handleContinueWeek}
@@ -1729,12 +1901,14 @@ export default function StudySection({
         />
       )}
 
-      {/* Study Progress tracker (always visible, except hidden on mobile inside a week) */}
-      <div className={openWeek !== null ? 'hidden md:block' : undefined}>
-        <ProgressTracker
-          completedWeeks={completedWeeks}
-        />
-      </div>
+      {/* Study Progress tracker (part/week/chapter views; hidden on mobile inside a week) */}
+      {openPart !== null && (
+        <div className={openWeek !== null ? 'hidden md:block' : undefined}>
+          <ProgressTracker
+            completedWeeks={completedWeeks}
+          />
+        </div>
+      )}
 
       {/* Landing: then the part cards */}
       {openPart === null && (

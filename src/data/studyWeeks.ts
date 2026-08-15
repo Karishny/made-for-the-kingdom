@@ -7,12 +7,18 @@ export interface VideoResource {
   url: string
 }
 
+export interface PodcastResource {
+  title: string
+  url: string
+}
+
 export interface WeekResource {
   type: ResourceType
   label: string
   placeholder: string
   url?: string
   videos?: VideoResource[]
+  podcasts?: PodcastResource[]
 }
 
 export interface StudyWeek {
@@ -105,8 +111,25 @@ function buildWeeks(part: 1 | 2 | 3, weekStart: number): StudyWeek[] {
               title: "Book of Isaiah Summary: A Complete Animated Overview (Part 1)",
               url: "https://youtu.be/d0A6Uchb1F8?si=RLLH8riBRfiw04qu",
             },
+            {
+              title: "Is Holiness Just Moral Perfection? (The Bible's Bigger Idea)",
+              url: "https://youtu.be/l9vn5UvsHvM?si=_PWYXtY2NzWSkeMj",
+            },
           ]
           copy.placeholder = "Watch this week's teaching video"
+        }
+        if (copy.type === "podcast" && weekNumber === 1) {
+          copy.podcasts = [
+            {
+              title: "The Cosmic Mount Zion in Isaiah",
+              url: "https://bibleproject.com/podcasts/cosmic-mount-zion-isaiah/",
+            },
+            {
+              title: "The Tribulation Will Kill Billions, But You Won't Be There",
+              url: "https://open.spotify.com/episode/3wu6s9YAg8QswDXRvT2cdl?si=BA5ZNa_qT2OCDbbw1GpjCQ",
+            },
+          ]
+          copy.placeholder = "Listen to this week's podcast episodes"
         }
         return copy
       }),

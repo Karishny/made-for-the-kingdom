@@ -10,6 +10,7 @@ export const C = {
   gold: '#c9b050',
   lavender: '#927f9b',
   olive: '#949b61',
+  oliveMid: '#6E7450',
   oliveDark: '#454930',
   rose: '#a84c5c',
   mauve: '#c57c89',

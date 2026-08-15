@@ -17,9 +17,7 @@ function AuthArea({ onSignIn }: { onSignIn: () => void }) {
         >
           {user.initials}
         </div>
-        <span className="text-xs" style={{ color: `${C.ink}77`, fontFamily: FONT_SANS }}>
-          {user.name}
-        </span>
+        <EditableName />
         <button onClick={logout} className="text-xs" style={{ color: `${C.ink}44`, fontFamily: FONT_SANS }}>
           Sign out
         </button>
@@ -73,22 +71,119 @@ function MobileAuthArea({ onSignIn }: { onSignIn: () => void }) {
   }
   const initial = (user.name.trim()[0] ?? '?').toUpperCase()
   return (
-    <div className="flex items-center justify-end gap-3 pr-4">
-      <button
-        onClick={logout}
-        className="text-sm hover:opacity-70 transition-opacity duration-200"
-        style={{ fontFamily: FONT_SANS, color: C.oliveDark, letterSpacing: '0.08em' }}
-      >
-        sign out
-      </button>
-      <span
-        className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold flex-shrink-0"
-        style={{ background: `${user.color}25`, color: user.color, border: `1.5px solid ${user.color}55`, fontFamily: FONT_SANS }}
-        aria-label={`signed in as ${user.name}`}
-      >
-        {initial}
-      </span>
+    <div className="flex flex-col items-end gap-2 pr-4">
+      <div className="flex items-center gap-3">
+        <button
+          onClick={logout}
+          className="text-sm hover:opacity-70 transition-opacity duration-200"
+          style={{ fontFamily: FONT_SANS, color: C.oliveDark, letterSpacing: '0.08em' }}
+        >
+          sign out
+        </button>
+        <span
+          className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold flex-shrink-0"
+          style={{ background: `${user.color}25`, color: user.color, border: `1.5px solid ${user.color}55`, fontFamily: FONT_SANS }}
+          aria-label={`signed in as ${user.name}`}
+        >
+          {initial}
+        </span>
+      </div>
+      <EditableName />
     </div>
+  )
+}
+
+// Inline username editor shown when signed in. Clicking the pencil swaps the
+// display name for a small input; saving updates the profile, the auth
+// metadata, and the author fields on the user's existing notes (see
+// UserContext.updateProfile).
+function EditableName() {
+  const { user, updateProfile } = useUser()
+  const [editing, setEditing] = useState(false)
+  const [value, setValue] = useState("")
+  const [busy, setBusy] = useState(false)
+  const [err, setErr] = useState("")
+
+  if (!user) return null
+
+  if (!editing) {
+    return (
+      <span className="inline-flex items-center gap-1.5">
+        <span className="text-xs" style={{ color: `${C.ink}77`, fontFamily: FONT_SANS }}>
+          {user.name}
+        </span>
+        <button
+          type="button"
+          onClick={() => {
+            setValue(user.name)
+            setErr("")
+            setEditing(true)
+          }}
+          className="cursor-pointer hover:opacity-70 transition-opacity duration-200"
+          aria-label="Edit username"
+          title="Edit username"
+        >
+          <svg width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round">
+            <path d="M11.5 1.5 L14.5 4.5 L5 14 L1 15 L2 11 Z" />
+          </svg>
+        </button>
+      </span>
+    )
+  }
+
+  async function save() {
+    if (busy) return
+    setErr("")
+    setBusy(true)
+    const res = await updateProfile(value)
+    setBusy(false)
+    if (!res.ok) {
+      setErr(res.message || "Could not update your username.")
+      return
+    }
+    setEditing(false)
+  }
+
+  return (
+    <span className="inline-flex items-center gap-1.5">
+      <input
+        autoFocus
+        value={value}
+        onChange={(e) => {
+          setValue(e.target.value)
+          setErr("")
+        }}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") void save()
+          if (e.key === "Escape") setEditing(false)
+        }}
+        className="w-28 px-2 py-1 rounded-sm text-xs outline-none"
+        style={{
+          background: `${C.ink}08`,
+          border: `1px solid ${err ? C.terra : `${C.ink}25`}`,
+          color: C.ink,
+          fontFamily: FONT_SANS,
+        }}
+        placeholder="Username"
+      />
+      <button
+        type="button"
+        onClick={() => void save()}
+        disabled={busy}
+        className="text-xs cursor-pointer hover:opacity-70 transition-opacity duration-200 disabled:opacity-50"
+        style={{ color: C.oliveDark, fontFamily: FONT_SANS }}
+      >
+        {busy ? "saving…" : "save"}
+      </button>
+      <button
+        type="button"
+        onClick={() => setEditing(false)}
+        className="text-xs cursor-pointer hover:opacity-70 transition-opacity duration-200"
+        style={{ color: `${C.ink}55`, fontFamily: FONT_SANS }}
+      >
+        cancel
+      </button>
+    </span>
   )
 }
 
