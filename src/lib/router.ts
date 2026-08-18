@@ -19,6 +19,8 @@
 import { useCallback, useEffect, useState } from 'react'
 import type { BibleVersion } from '@/data/isaiah'
 
+history.scrollRestoration = 'manual'
+
 export type Page = 'home' | 'study' | 'notes' | 'about'
 
 export interface AppRoute {
@@ -100,8 +102,6 @@ export function useRoute() {
   useEffect(() => {
     const onPop = () => {
       setRoute(parseRoute())
-      // Keep the view predictable when the browser Back/Forward buttons fire.
-      window.scrollTo({ top: 0, left: 0, behavior: 'auto' })
     }
     window.addEventListener('popstate', onPop)
     return () => window.removeEventListener('popstate', onPop)
@@ -115,9 +115,6 @@ export function useRoute() {
     } else {
       window.history.pushState(null, '', url)
     }
-    // Each navigation is a new screen: reset the scroll position so a "next
-    // week" click from the bottom of a long week lands at the top of the next.
-    window.scrollTo({ top: 0, left: 0, behavior: 'auto' })
   }, [])
 
   return { route, navigate }

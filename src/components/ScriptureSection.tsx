@@ -18,6 +18,8 @@ import {
   type ResourceType,
   type VideoResource,
   type PodcastResource,
+  type CommentaryResource,
+  type FurtherStudyResource,
   type CompletedResources,
 } from '@/data/studyWeeks'
 import Button from '@/components/Button'
@@ -861,6 +863,584 @@ function PodcastSection({ resource, color, done, onToggle }: { resource: StudyWe
   )
 }
 
+/* ─── Written Commentary — digital book/page carousel ─── */
+
+function CommentaryCard({ item, color }: { item: CommentaryResource; color: string }) {
+  return (
+    <a
+      href={item.url}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="flex-shrink-0 w-[220px] rounded-sm overflow-hidden transition-all duration-200 hover:scale-[1.02] group"
+      style={{
+        background: `linear-gradient(145deg, ${C.bg} 0%, #EDE9E0 100%)`,
+        border: `1px solid ${color}25`,
+        boxShadow: `2px 3px 0 ${color}18, 4px 5px 12px ${C.ink}08`,
+      }}
+    >
+      {/* Book spine */}
+      <div className="flex">
+        <div
+          className="w-[6px] flex-shrink-0"
+          style={{
+            background: `linear-gradient(180deg, ${color} 0%, ${color}CC 100%)`,
+          }}
+        />
+        <div className="flex-1 px-4 py-4">
+          {/* Source label */}
+          {item.source && (
+            <p
+              className="text-[9px] tracking-[0.2em] uppercase mb-2"
+              style={{
+                fontFamily: "'Source Sans 3', sans-serif",
+                fontWeight: 600,
+                color: `${color}BB`,
+              }}
+            >
+              {item.source}
+            </p>
+          )}
+          {/* Title */}
+          <h5
+            className="mb-2 leading-snug"
+            style={{
+              fontFamily: "'Fraunces', serif",
+              fontSize: "0.95rem",
+              fontWeight: 400,
+              color: C.ink,
+            }}
+          >
+            {item.title}
+          </h5>
+          {/* Description */}
+          {item.description && (
+            <p
+              className="text-xs leading-relaxed mb-3"
+              style={{
+                fontFamily: "'Source Sans 3', sans-serif",
+                color: `${C.ink}88`,
+                display: "-webkit-box",
+                WebkitLineClamp: 3,
+                WebkitBoxOrient: "vertical",
+                overflow: "hidden",
+              } as React.CSSProperties}
+            >
+              {item.description}
+            </p>
+          )}
+          {/* Page curl indicator */}
+          <div className="flex items-center gap-1.5 mt-auto">
+            <span
+              className="text-[10px] tracking-[0.12em] uppercase"
+              style={{
+                fontFamily: "'Source Sans 3', sans-serif",
+                fontWeight: 600,
+                color: `${color}99`,
+              }}
+            >
+              Read
+            </span>
+            <svg
+              width="12"
+              height="12"
+              viewBox="0 0 24 24"
+              fill="none"
+              aria-hidden="true"
+              style={{ color: `${color}99` }}
+            >
+              <path
+                d="M7 17 L17 7 M17 7 H7 M17 7 V17"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </div>
+        </div>
+      </div>
+    </a>
+  )
+}
+
+function CommentarySection({
+  resource,
+  color,
+  done,
+  onToggle,
+}: {
+  resource: StudyWeek["resources"][number]
+  color: string
+  done: boolean
+  onToggle: () => void
+}) {
+  const scroller = useRef<HTMLDivElement>(null)
+  const commentaries = resource.commentaries ?? []
+  const scrollBy = (n: number) =>
+    scroller.current?.scrollBy({ left: n, behavior: "smooth" })
+  const dragRef = useRef<{ x: number; left: number } | null>(null)
+  const movedRef = useRef(false)
+
+  const onPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (e.pointerType !== "mouse") return
+    dragRef.current = {
+      x: e.clientX,
+      left: scroller.current?.scrollLeft ?? 0,
+    }
+    movedRef.current = false
+    if (scroller.current) scroller.current.style.scrollSnapType = "none"
+  }
+  const onPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    const d = dragRef.current
+    if (!d || e.pointerType !== "mouse") return
+    const dx = e.clientX - d.x
+    if (Math.abs(dx) > 5) movedRef.current = true
+    if (scroller.current) scroller.current.scrollLeft = d.left - dx
+  }
+  const endDrag = () => {
+    dragRef.current = null
+    if (scroller.current) scroller.current.style.scrollSnapType = ""
+  }
+  const onClickCapture = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (movedRef.current) {
+      e.preventDefault()
+      e.stopPropagation()
+      movedRef.current = false
+    }
+  }
+
+  if (commentaries.length === 0) {
+    return (
+      <div
+        className="rounded border p-5"
+        style={{
+          borderColor: `${color}30`,
+          background: done ? `${color}12` : `${color}05`,
+          opacity: 0.95,
+        }}
+      >
+        <div className="flex items-start justify-between gap-3 mb-3">
+          <div
+            className="w-10 h-10 rounded-sm flex items-center justify-center flex-shrink-0"
+            style={{ background: `${color}16`, border: `1px solid ${color}30` }}
+          >
+            <ResourceIcon type="commentary" color={color} />
+          </div>
+          <div className="flex items-center gap-2">
+            <span
+              className="text-[10px] tracking-[0.14em] uppercase px-2 py-0.5 rounded-sm"
+              style={{
+                fontFamily: "'Source Sans 3', sans-serif",
+                fontWeight: 600,
+                color: `${C.ink}55`,
+                background: `${C.ink}08`,
+                border: `1px solid ${C.ink}18`,
+              }}
+            >
+              Coming soon
+            </span>
+            <CompleteToggle done={done} color={color} onToggle={onToggle} circle />
+          </div>
+        </div>
+        <p
+          className="text-xs tracking-[0.18em] uppercase mb-1"
+          style={{
+            color,
+            fontFamily: "'Source Sans 3', sans-serif",
+            fontWeight: 600,
+          }}
+        >
+          {resource.label}
+        </p>
+        <p
+          className="text-xs italic"
+          style={{
+            fontFamily: "'Fraunces', serif",
+            color: `${C.ink}66`,
+          }}
+        >
+          {resource.placeholder}
+        </p>
+      </div>
+    )
+  }
+
+  return (
+    <div
+      className="rounded border p-5"
+      style={{
+        borderColor: `${color}30`,
+        background: done ? `${color}12` : `${color}05`,
+        opacity: 0.95,
+      }}
+    >
+      <div className="flex items-start justify-between gap-3 mb-3">
+        <div
+          className="w-10 h-10 rounded-sm flex items-center justify-center flex-shrink-0"
+          style={{ background: `${color}16`, border: `1px solid ${color}30` }}
+        >
+          <ResourceIcon type="commentary" color={color} />
+        </div>
+        <div className="flex items-center gap-2">
+          <span
+            className="text-[10px] tracking-[0.14em] uppercase px-2 py-0.5 rounded-sm"
+            style={{
+              fontFamily: "'Source Sans 3', sans-serif",
+              fontWeight: 600,
+              color: done ? C.bg : color,
+              background: done ? color : `${color}10`,
+              border: `1px solid ${done ? color : `${color}35`}`,
+            }}
+          >
+            {done ? "Done" : "Read now"}
+          </span>
+          <CompleteToggle done={done} color={color} onToggle={onToggle} circle />
+        </div>
+      </div>
+      <div className="flex items-center justify-between gap-3 mb-1">
+        <p
+          className="text-xs tracking-[0.18em] uppercase"
+          style={{
+            color,
+            fontFamily: "'Source Sans 3', sans-serif",
+            fontWeight: 600,
+          }}
+        >
+          {resource.label}
+        </p>
+        {commentaries.length > 1 && (
+          <div className="flex items-center gap-1.5 flex-shrink-0">
+            <CarouselArrow
+              color={color}
+              dir="left"
+              label="commentaries"
+              onClick={() => scrollBy(-232)}
+            />
+            <CarouselArrow
+              color={color}
+              dir="right"
+              label="commentaries"
+              onClick={() => scrollBy(232)}
+            />
+          </div>
+        )}
+      </div>
+      <p
+        className="text-xs italic mb-3"
+        style={{
+          fontFamily: "'Fraunces', serif",
+          color: `${C.ink}66`,
+        }}
+      >
+        {resource.placeholder}
+      </p>
+      <div
+        ref={scroller}
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={endDrag}
+        onPointerLeave={endDrag}
+        onPointerCancel={endDrag}
+        onClickCapture={onClickCapture}
+        className="flex gap-3 overflow-x-auto scroll-smooth snap-x snap-mandatory py-1 select-none cursor-grab active:cursor-grabbing [&::-webkit-scrollbar]:hidden"
+        style={{ scrollbarWidth: "none" }}
+      >
+        {commentaries.map((c) => (
+          <CommentaryCard key={c.url} item={c} color={color} />
+        ))}
+      </div>
+    </div>
+  )
+}
+
+/* ─── Further Study — minimal editorial resource carousel ─── */
+
+function FurtherStudyCard({ item, color }: { item: FurtherStudyResource; color: string }) {
+  return (
+    <a
+      href={item.url}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="flex-shrink-0 w-[240px] rounded-sm overflow-hidden transition-all duration-200 hover:scale-[1.02] group"
+      style={{
+        background: C.bg,
+        border: `1px solid ${C.ink}18`,
+        boxShadow: `0 1px 0 ${C.ink}0A, 0 2px 8px ${C.ink}06`,
+      }}
+    >
+      {/* Top accent line */}
+      <div className="h-[3px] w-full" style={{ background: `${color}60` }} />
+      <div className="px-4 py-4">
+        {/* Source type badge */}
+        {item.source && (
+          <span
+            className="inline-block text-[9px] tracking-[0.18em] uppercase px-2 py-0.5 rounded-sm mb-2.5"
+            style={{
+              fontFamily: "'Source Sans 3', sans-serif",
+              fontWeight: 600,
+              color: `${color}CC`,
+              background: `${color}10`,
+              border: `1px solid ${color}25`,
+            }}
+          >
+            {item.source}
+          </span>
+        )}
+        {/* Title */}
+        <h5
+          className="mb-1.5 leading-snug"
+          style={{
+            fontFamily: "'Fraunces', serif",
+            fontSize: "0.95rem",
+            fontWeight: 400,
+            color: C.ink,
+          }}
+        >
+          {item.title}
+        </h5>
+        {/* Description */}
+        {item.description && (
+          <p
+            className="text-xs leading-relaxed mb-3"
+            style={{
+              fontFamily: "'Source Sans 3', sans-serif",
+              color: `${C.ink}77`,
+              display: "-webkit-box",
+              WebkitLineClamp: 2,
+              WebkitBoxOrient: "vertical",
+              overflow: "hidden",
+            } as React.CSSProperties}
+          >
+            {item.description}
+          </p>
+        )}
+        {/* Action */}
+        <div
+          className="flex items-center gap-1.5 pt-2"
+          style={{ borderTop: `1px solid ${C.ink}10` }}
+        >
+          <span
+            className="text-[10px] tracking-[0.12em] uppercase"
+            style={{
+              fontFamily: "'Source Sans 3', sans-serif",
+              fontWeight: 600,
+              color: `${color}AA`,
+            }}
+          >
+            Explore
+          </span>
+          <svg
+            width="12"
+            height="12"
+            viewBox="0 0 24 24"
+            fill="none"
+            aria-hidden="true"
+            style={{ color: `${color}AA` }}
+          >
+            <path
+              d="M7 17 L17 7 M17 7 H7 M17 7 V17"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        </div>
+      </div>
+    </a>
+  )
+}
+
+function FurtherStudySection({
+  resource,
+  color,
+  done,
+  onToggle,
+}: {
+  resource: StudyWeek["resources"][number]
+  color: string
+  done: boolean
+  onToggle: () => void
+}) {
+  const scroller = useRef<HTMLDivElement>(null)
+  const items = resource.furtherStudy ?? []
+  const scrollBy = (n: number) =>
+    scroller.current?.scrollBy({ left: n, behavior: "smooth" })
+  const dragRef = useRef<{ x: number; left: number } | null>(null)
+  const movedRef = useRef(false)
+
+  const onPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (e.pointerType !== "mouse") return
+    dragRef.current = {
+      x: e.clientX,
+      left: scroller.current?.scrollLeft ?? 0,
+    }
+    movedRef.current = false
+    if (scroller.current) scroller.current.style.scrollSnapType = "none"
+  }
+  const onPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    const d = dragRef.current
+    if (!d || e.pointerType !== "mouse") return
+    const dx = e.clientX - d.x
+    if (Math.abs(dx) > 5) movedRef.current = true
+    if (scroller.current) scroller.current.scrollLeft = d.left - dx
+  }
+  const endDrag = () => {
+    dragRef.current = null
+    if (scroller.current) scroller.current.style.scrollSnapType = ""
+  }
+  const onClickCapture = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (movedRef.current) {
+      e.preventDefault()
+      e.stopPropagation()
+      movedRef.current = false
+    }
+  }
+
+  if (items.length === 0) {
+    return (
+      <div
+        className="rounded border p-5"
+        style={{
+          borderColor: `${color}30`,
+          background: done ? `${color}12` : `${color}05`,
+          opacity: 0.95,
+        }}
+      >
+        <div className="flex items-start justify-between gap-3 mb-3">
+          <div
+            className="w-10 h-10 rounded-sm flex items-center justify-center flex-shrink-0"
+            style={{ background: `${color}16`, border: `1px solid ${color}30` }}
+          >
+            <ResourceIcon type="articles" color={color} />
+          </div>
+          <div className="flex items-center gap-2">
+            <span
+              className="text-[10px] tracking-[0.14em] uppercase px-2 py-0.5 rounded-sm"
+              style={{
+                fontFamily: "'Source Sans 3', sans-serif",
+                fontWeight: 600,
+                color: `${C.ink}55`,
+                background: `${C.ink}08`,
+                border: `1px solid ${C.ink}18`,
+              }}
+            >
+              Coming soon
+            </span>
+            <CompleteToggle done={done} color={color} onToggle={onToggle} circle />
+          </div>
+        </div>
+        <p
+          className="text-xs tracking-[0.18em] uppercase mb-1"
+          style={{
+            color,
+            fontFamily: "'Source Sans 3', sans-serif",
+            fontWeight: 600,
+          }}
+        >
+          {resource.label}
+        </p>
+        <p
+          className="text-xs italic"
+          style={{
+            fontFamily: "'Fraunces', serif",
+            color: `${C.ink}66`,
+          }}
+        >
+          {resource.placeholder}
+        </p>
+      </div>
+    )
+  }
+
+  return (
+    <div
+      className="rounded border p-5"
+      style={{
+        borderColor: `${color}30`,
+        background: done ? `${color}12` : `${color}05`,
+        opacity: 0.95,
+      }}
+    >
+      <div className="flex items-start justify-between gap-3 mb-3">
+        <div
+          className="w-10 h-10 rounded-sm flex items-center justify-center flex-shrink-0"
+          style={{ background: `${color}16`, border: `1px solid ${color}30` }}
+        >
+          <ResourceIcon type="articles" color={color} />
+        </div>
+        <div className="flex items-center gap-2">
+          <span
+            className="text-[10px] tracking-[0.14em] uppercase px-2 py-0.5 rounded-sm"
+            style={{
+              fontFamily: "'Source Sans 3', sans-serif",
+              fontWeight: 600,
+              color: done ? C.bg : color,
+              background: done ? color : `${color}10`,
+              border: `1px solid ${done ? color : `${color}35`}`,
+            }}
+          >
+            {done ? "Done" : "Explore"}
+          </span>
+          <CompleteToggle done={done} color={color} onToggle={onToggle} circle />
+        </div>
+      </div>
+      <div className="flex items-center justify-between gap-3 mb-1">
+        <p
+          className="text-xs tracking-[0.18em] uppercase"
+          style={{
+            color,
+            fontFamily: "'Source Sans 3', sans-serif",
+            fontWeight: 600,
+          }}
+        >
+          {resource.label}
+        </p>
+        {items.length > 1 && (
+          <div className="flex items-center gap-1.5 flex-shrink-0">
+            <CarouselArrow
+              color={color}
+              dir="left"
+              label="resources"
+              onClick={() => scrollBy(-252)}
+            />
+            <CarouselArrow
+              color={color}
+              dir="right"
+              label="resources"
+              onClick={() => scrollBy(252)}
+            />
+          </div>
+        )}
+      </div>
+      <p
+        className="text-xs italic mb-3"
+        style={{
+          fontFamily: "'Fraunces', serif",
+          color: `${C.ink}66`,
+        }}
+      >
+        {resource.placeholder}
+      </p>
+      <div
+        ref={scroller}
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={endDrag}
+        onPointerLeave={endDrag}
+        onPointerCancel={endDrag}
+        onClickCapture={onClickCapture}
+        className="flex gap-3 overflow-x-auto scroll-smooth snap-x snap-mandatory py-1 select-none cursor-grab active:cursor-grabbing [&::-webkit-scrollbar]:hidden"
+        style={{ scrollbarWidth: "none" }}
+      >
+        {items.map((item) => (
+          <FurtherStudyCard key={item.url} item={item} color={color} />
+        ))}
+      </div>
+    </div>
+  )
+}
+
 function CompleteToggle({ done, color, onToggle, circle = false }: { done: boolean; color: string; onToggle: () => void; circle?: boolean }) {
   // The visible mark stays small and quiet — a status indicator rather than a
   // button — while the surrounding button keeps a comfortable tap target.
@@ -1042,6 +1622,22 @@ function WeekView({
             {week.resources.map((r) =>
               r.type === 'podcast' && r.podcasts && r.podcasts.length > 0 ? (
                 <PodcastSection
+                  key={r.type}
+                  resource={r}
+                  color={currentPart.color}
+                  done={doneResources.includes(r.type)}
+                  onToggle={() => onToggleResource(r.type)}
+                />
+              ) : r.type === 'commentary' && r.commentaries && r.commentaries.length > 0 ? (
+                <CommentarySection
+                  key={r.type}
+                  resource={r}
+                  color={currentPart.color}
+                  done={doneResources.includes(r.type)}
+                  onToggle={() => onToggleResource(r.type)}
+                />
+              ) : r.type === 'articles' && r.furtherStudy && r.furtherStudy.length > 0 ? (
+                <FurtherStudySection
                   key={r.type}
                   resource={r}
                   color={currentPart.color}

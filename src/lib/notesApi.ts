@@ -259,6 +259,148 @@ export async function removeNote(id: string): Promise<void> {
   if (error) throw error
 }
 
+// ─── Notifications (localStorage, per-user) ───
+// Notifications are lightweight and local: they track replies to the current
+// user's notes so the UI can show an unread badge. No database table needed.
+
+export interface NoteNotification {
+  id: string
+  noteId: string
+  noteTitle: string
+  noteScripture: string
+  replyId: string
+  replyAuthor: string
+  replyBody: string
+  replyDate: string
+  read: boolean
+  createdAt: string
+}
+
+const NOTIFICATIONS_KEY = "mftk_notifications"
+const SEEN_REPLIES_KEY = "mftk_seen_replies"
+
+function notificationsKey(userId: string) {
+  return `${NOTIFICATIONS_KEY}_${userId}`
+}
+
+function seenRepliesKey(userId: string) {
+  return `${SEEN_REPLIES_KEY}_${userId}`
+}
+
+export function getNotifications(userId: string): NoteNotification[] {
+  try {
+    const raw = localStorage.getItem(notificationsKey(userId))
+    return raw ? JSON.parse(raw) : []
+  } catch {
+    return []
+  }
+}
+
+export function saveNotifications(
+  userId: string,
+  notifications: NoteNotification[],
+): void {
+  try {
+    localStorage.setItem(
+      notificationsKey(userId),
+      JSON.stringify(notifications),
+    )
+  } catch {
+    /* ignore */
+  }
+}
+
+export function markNotificationRead(
+  userId: string,
+  notificationId: string,
+): void {
+  const notifications = getNotifications(userId)
+  const updated = notifications.map((n) =>
+    n.id === notificationId ? { ...n, read: true } : n,
+  )
+  saveNotifications(userId, updated)
+}
+
+export function markAllNotificationsRead(userId: string): void {
+  const notifications = getNotifications(userId)
+  saveNotifications(
+    userId,
+    notifications.map((n) => ({ ...n, read: true })),
+  )
+}
+
+function getSeenReplyIds(userId: string): Set<string> {
+  try {
+    const raw = localStorage.getItem(seenRepliesKey(userId))
+    return raw ? new Set(JSON.parse(raw)) : new Set()
+  } catch {
+    return new Set()
+  }
+}
+
+function saveSeenReplyIds(userId: string, ids: Set<string>): void {
+  try {
+    localStorage.setItem(seenRepliesKey(userId), JSON.stringify([...ids]))
+  } catch {
+    /* ignore */
+  }
+}
+
+// On first load, mark all existing replies as seen so only genuinely new replies
+// (added after the user's first visit) trigger notifications.
+export function bootstrapSeenReplies(
+  notes: StudyNote[],
+  userId: string,
+): void {
+  const seenIds = getSeenReplyIds(userId)
+  if (seenIds.size > 0) return
+  const allReplyIds = new Set<string>()
+  for (const note of notes) {
+    for (const reply of note.replies ?? []) {
+      allReplyIds.add(reply.id)
+    }
+  }
+  saveSeenReplyIds(userId, allReplyIds)
+}
+
+// Scans the user's notes for replies not yet in the seen set. New replies from
+// other users become unread notifications; own replies are silently marked seen.
+export function detectNewReplies(
+  notes: StudyNote[],
+  userId: string,
+): NoteNotification[] {
+  const seenIds = getSeenReplyIds(userId)
+  const newNotifications: NoteNotification[] = []
+  const myNotes = notes.filter((n) => n.authorId === userId)
+
+  for (const note of myNotes) {
+    for (const reply of note.replies ?? []) {
+      if (seenIds.has(reply.id)) continue
+      seenIds.add(reply.id)
+      if (reply.authorId === userId) continue
+      newNotifications.push({
+        id: `${note.id}_${reply.id}`,
+        noteId: note.id,
+        noteTitle: note.title,
+        noteScripture: note.scripture,
+        replyId: reply.id,
+        replyAuthor: reply.authorName,
+        replyBody: reply.body,
+        replyDate: reply.date,
+        read: false,
+        createdAt: new Date().toISOString(),
+      })
+    }
+  }
+
+  if (newNotifications.length > 0) {
+    const existing = getNotifications(userId)
+    saveNotifications(userId, [...newNotifications, ...existing])
+  }
+  saveSeenReplyIds(userId, seenIds)
+  return newNotifications
+}
+
 // ─── Realtime ───
 // Subscribes to note + reply changes and calls onNotesChanged() so the UI can
 // refetch. Refetch-on-event is deliberately simple and reliable: it can never

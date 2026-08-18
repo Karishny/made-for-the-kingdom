@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import LoginModal from "@/components/LoginModal"
 import NotesSection from "@/components/NotesSection"
 import StudySection from "@/components/ScriptureSection"
@@ -16,6 +16,30 @@ import { useRoute } from "@/lib/router"
 export default function App() {
   const { route, navigate } = useRoute()
   const [showLogin, setShowLogin] = useState(false)
+
+  useEffect(() => {
+    const key = 'scroll:' + window.location.pathname + window.location.search
+    const saved = sessionStorage.getItem(key)
+
+    if (saved) {
+      const y = parseInt(saved, 10)
+      if (!isNaN(y) && y > 0) {
+        requestAnimationFrame(() => {
+          setTimeout(() => {
+            document.documentElement.style.scrollBehavior = 'auto'
+            window.scrollTo({ top: y, left: 0, behavior: 'instant' })
+            document.documentElement.style.scrollBehavior = ''
+          }, 0)
+        })
+      }
+    }
+
+    const saveScroll = () => {
+      sessionStorage.setItem(key, String(window.scrollY))
+    }
+    window.addEventListener('beforeunload', saveScroll)
+    return () => window.removeEventListener('beforeunload', saveScroll)
+  }, [])
 
   const activeNav =
     route.page === "home"
@@ -240,26 +264,6 @@ export default function App() {
                 given us.
               </p>
               <p
-                className="text-sm leading-relaxed mb-4 md:text-justify"
-                style={{
-                  fontFamily: FONT_SANS,
-                  color: `${C.ink}bb`,
-                  lineHeight: "1.8",
-                }}
-              >
-                My hope is that{" "}
-                <em style={{ fontFamily: FONT_SERIF }}>made for the kingdom</em>{" "}
-                becomes a place where we can{" "}
-                <em style={{ fontFamily: FONT_SERIF, color: C.ink }}>
-                  create, encourage, and inspire
-                </em>{" "}
-                one another to use our gifts boldly, creating little glimpses of{" "}
-                <em style={{ fontFamily: FONT_SERIF, color: C.ink }}>
-                  His Kingdom
-                </em>{" "}
-                here on earth until the day He comes.
-              </p>
-              <p
                 className="text-sm leading-relaxed"
                 style={{
                   fontFamily: FONT_SANS,
@@ -274,7 +278,19 @@ export default function App() {
                 to bring glory to Him.
               </p>
               <p className="mt-10 text-center">
-                <MadeFtk />
+                <span
+                  style={{
+                    fontFamily: FONT_SERIF,
+                    fontStyle: 'italic',
+                    fontWeight: 400,
+                    fontSize: '1rem',
+                    lineHeight: 1.5,
+                    letterSpacing: 'normal',
+                    color: `${C.ink}77`,
+                  }}
+                >
+                  — <span style={{ color: `${C.ink}bb` }}>karish</span>
+                </span>
               </p>
             </section>
           )}

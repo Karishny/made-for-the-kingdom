@@ -12,6 +12,20 @@ export interface PodcastResource {
   url: string
 }
 
+export interface CommentaryResource {
+  title: string
+  description?: string
+  url: string
+  source?: string
+}
+
+export interface FurtherStudyResource {
+  title: string
+  description?: string
+  url: string
+  source?: string
+}
+
 export interface WeekResource {
   type: ResourceType
   label: string
@@ -19,6 +33,8 @@ export interface WeekResource {
   url?: string
   videos?: VideoResource[]
   podcasts?: PodcastResource[]
+  commentaries?: CommentaryResource[]
+  furtherStudy?: FurtherStudyResource[]
 }
 
 export interface StudyWeek {
@@ -57,8 +73,8 @@ const WEEKLY_RESOURCES: WeekResource[] = [
   },
   {
     type: "articles",
-    label: "Articles & Further Reading",
-    placeholder: "Additional resources coming soon",
+    label: "Further Study",
+    placeholder: "Explore further study resources",
   },
 ]
 
@@ -112,8 +128,25 @@ function buildWeeks(part: 1 | 2 | 3, weekStart: number): StudyWeek[] {
               url: "https://youtu.be/d0A6Uchb1F8?si=RLLH8riBRfiw04qu",
             },
             {
+              title: "Don't Miss the Point of God's Anger in the Bible",
+              url: "https://youtu.be/TeQ1nq_YJD0?si=CBc-wvznFkW7fX-s",
+            },
+          ]
+          copy.placeholder = "Watch this week's teaching video"
+        }
+        if (copy.type === "video" && weekNumber === 2) {
+          copy.videos = [
+            {
               title: "Is Holiness Just Moral Perfection? (The Bible's Bigger Idea)",
               url: "https://youtu.be/l9vn5UvsHvM?si=_PWYXtY2NzWSkeMj",
+            },
+            {
+              title: "God's Calling  |  Isaiah 6  |  Gary Hamrick",
+              url: "https://youtu.be/lIAqT3t6Gr4?si=lSV04BU9X8KpDvWp",
+            },
+            {
+              title: 'Isaiah 4\u20136 \u2014 \u201CI saw the Lord, high and lifted up.\u201D',
+              url: "https://youtu.be/jMkYbPN3l08?si=h78tzXgP1cxIo3c2",
             },
           ]
           copy.placeholder = "Watch this week's teaching video"
@@ -128,8 +161,117 @@ function buildWeeks(part: 1 | 2 | 3, weekStart: number): StudyWeek[] {
               title: "The Tribulation Will Kill Billions, But You Won't Be There",
               url: "https://open.spotify.com/episode/3wu6s9YAg8QswDXRvT2cdl?si=BA5ZNa_qT2OCDbbw1GpjCQ",
             },
+            {
+              title: "37. Isaiah the Prophet",
+              url: "https://open.spotify.com/episode/1nQeSrJ491AGEHZnAYKJtt?si=wLZsqE95Trm9LOF00N1Qcw",
+            },
           ]
           copy.placeholder = "Listen to this week's podcast episodes"
+        }
+        if (copy.type === "podcast" && weekNumber === 2) {
+          copy.podcasts = [
+            {
+              title: "Isaiah 5\u20136:7 \u2014 A Nation Ripe for Judgment",
+              url: "https://enduringword.com/sermons/isaiah/isaiah-5-67-a-nation-ripe-for-judgment/",
+            },
+          ]
+          copy.placeholder = "Listen to this week's podcast episodes"
+        }
+        if (copy.type === "commentary" && weekNumber === 1) {
+          copy.commentaries = [
+            {
+              title: "Isaiah 1–5 Commentary",
+              description: "A verse-by-verse exploration of Isaiah's opening judgment oracles.",
+              url: "https://www.blueletterbible.org/comm/mhc/isa/isa-001.cfm",
+              source: "Matthew Henry",
+            },
+            {
+              title: "The Book of Isaiah",
+              description: "Historical and theological overview of the entire prophetic book.",
+              url: "https://www.biblegateway.com/resources/commentaries/isaiah/",
+              source: "Bible Gateway",
+            },
+          ]
+          copy.placeholder = "Read this week's written commentary"
+        }
+        if (copy.type === "commentary" && weekNumber === 2) {
+          copy.commentaries = [
+            {
+              title: "Isaiah 6 — Holy, Holy, Holy",
+              description: "A deep dive into Isaiah's vision of the Lord in the temple.",
+              url: "https://www.blueletterbible.org/comm/guzik_david/isa/isa6.cfm",
+              source: "David Guzik",
+            },
+            {
+              title: "Isaiah Commentary",
+              description: "Verse-level notes on Isaiah 1–39 with historical context.",
+              url: "https://enduringword.com/bible-commentary/isaiah-6/",
+              source: "Enduring Word",
+            },
+            {
+              title: "The Prophetic Messenger and His Message",
+              description: "Isaiah 6:1\u20139:21 \u2014 A study guide exploring Isaiah\u2019s prophetic calling, judgment, hope, and restoration.",
+              url: "https://yalebiblestudy.org/wp-content/uploads/2019/09/2-Isaiah-The-Prophetic-Messenger-Study-Guide.pdf",
+              source: "Yale Bible Study",
+            },
+            {
+              title: "Isaiah: Immanuel",
+              description: "A Yale Bible Study guide exploring the Immanuel motif in Isaiah.",
+              url: "https://yalebiblestudy.org/wp-content/uploads/2020/07/Isaiah-Immanuel.pdf",
+              source: "Yale Bible Study",
+            },
+          ]
+          copy.placeholder = "Read this week's written commentary"
+        }
+        if (copy.type === "commentary" && weekNumber >= 3 && weekNumber <= 6) {
+          copy.commentaries = [
+            {
+              title: "Isaiah Commentary",
+              description: "Verse-level notes with historical context and application.",
+              url: "https://enduringword.com/bible-commentary/isaiah-12/",
+              source: "Enduring Word",
+            },
+          ]
+          copy.placeholder = "Read this week's written commentary"
+        }
+        if (copy.type === "commentary" && weekNumber >= 7 && weekNumber <= 10) {
+          copy.commentaries = [
+            {
+              title: "Isaiah 40–55 Commentary",
+              description: "Exploring the servant songs and the promise of restoration.",
+              url: "https://www.blueletterbible.org/comm/mhc/isa/isa-040.cfm",
+              source: "Matthew Henry",
+            },
+          ]
+          copy.placeholder = "Read this week's written commentary"
+        }
+        if (copy.type === "commentary" && weekNumber >= 11) {
+          copy.commentaries = [
+            {
+              title: "Isaiah 56–66 Commentary",
+              description: "The final vision of renewal and the new heavens and new earth.",
+              url: "https://enduringword.com/bible-commentary/isaiah-65/",
+              source: "Enduring Word",
+            },
+          ]
+          copy.placeholder = "Read this week's written commentary"
+        }
+        if (copy.type === "articles") {
+          copy.furtherStudy = [
+            {
+              title: "Jesus In All Of Isaiah",
+              description: "A video series exploring Jesus throughout the book of Isaiah.",
+              url: "https://www.bible.com/videos/collections/1661-jesus-in-all-of-isaiah",
+              source: "Spoken Gospel",
+            },
+            {
+              title: "Isaiah \u2014 BibleTalk",
+              description: "An online study resource walking through the book of Isaiah.",
+              url: "https://bibletalk.tv/isaiah",
+              source: "BibleTalk",
+            },
+          ]
+          copy.placeholder = "Explore curated study resources"
         }
         return copy
       }),
