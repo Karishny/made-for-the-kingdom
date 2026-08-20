@@ -4,14 +4,14 @@ import Button from '@/components/Button'
 import MadeFtk from '@/components/MadeFtk'
 import { C, FONT_SANS, FONT_SERIF } from '@/theme'
 
-const navLinks = ['Home', 'Study', 'Notes', 'About', 'Explore']
+const navLinks = ['Home', 'Study', 'Notes', 'Explore', 'About']
 
 const navActiveColors: Record<string, string> = {
   Home: C.terra,
   Study: C.olive,
   Notes: C.lavender,
-  About: C.goldDeep,
   Explore: C.rose,
+  About: C.goldDeep,
 }
 
 function AuthArea({ onSignIn }: { onSignIn: () => void }) {

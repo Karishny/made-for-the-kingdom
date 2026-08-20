@@ -70,9 +70,11 @@ export default function App() {
     activeNav === "Home" || (activeNav === "Study" && studyView === "library")
   const isHome = activeNav === "Home"
 
+  const isExplore = activeNav === "Explore"
+
   return (
     <div
-      className="relative min-h-dvh"
+      className={`relative min-h-dvh ${isExplore ? 'flex flex-col' : ''}`}
       style={{ color: C.ink, backgroundColor: C.bg }}
     >
       <PwaSplash />
@@ -158,8 +160,10 @@ export default function App() {
       {/* ─── Main ─── */}
       {!isHome && (
         <main
-          className={`mx-auto px-6 py-12 md:py-16 ${
-            isWideMain ? "max-w-6xl" : "max-w-4xl"
+          className={`mx-auto px-6 ${
+            isExplore ? 'py-0 md:py-0' : 'py-12 md:py-16'
+          } ${isWideMain ? "max-w-6xl" : "max-w-4xl"} ${
+            isExplore ? 'flex-1 flex flex-col' : ''
           }`}
         >
           {/* ══ STUDY ══ */}
@@ -300,29 +304,31 @@ export default function App() {
 
           {/* ══ EXPLORE ══ */}
           {activeNav === "Explore" && (
-            <section className="max-w-xl mx-auto text-center py-8 md:py-16">
-              <p
-                className="text-[15px] md:text-[16px] leading-relaxed max-w-md mx-auto"
-                style={{
-                  fontFamily: FONT_SANS,
-                  fontWeight: 300,
-                  color: `${C.ink}aa`,
-                  lineHeight: 2,
-                }}
-              >
-                My journey with Jesus, the stories, the questions, the lessons,
-                and the moments in between.
-              </p>
-              <p
-                className="text-[13px] mt-6 uppercase"
-                style={{
-                  fontFamily: FONT_SANS,
-                  fontWeight: 500,
-                  color: C.lavender,
-                }}
-              >
-                Coming soon.
-              </p>
+            <section className="flex-1 flex flex-col items-center justify-center px-6 md:px-10">
+              <div className="w-full max-w-[320px] md:max-w-[600px] text-center">
+                <p
+                  className="text-[15px] md:text-[16px]"
+                  style={{
+                    fontFamily: FONT_SANS,
+                    fontWeight: 300,
+                    color: `${C.ink}aa`,
+                    lineHeight: 1.6,
+                  }}
+                >
+                  My journey with Jesus, the stories, the questions, the lessons,
+                  and the moments in between.
+                </p>
+                <p
+                  className="text-[13px] mt-7 uppercase"
+                  style={{
+                    fontFamily: FONT_SANS,
+                    fontWeight: 500,
+                    color: C.lavender,
+                  }}
+                >
+                  Coming soon.
+                </p>
+              </div>
             </section>
           )}
         </main>
