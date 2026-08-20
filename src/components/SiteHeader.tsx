@@ -4,7 +4,15 @@ import Button from '@/components/Button'
 import MadeFtk from '@/components/MadeFtk'
 import { C, FONT_SANS, FONT_SERIF } from '@/theme'
 
-const navLinks = ['Home', 'Study', 'Notes', 'About']
+const navLinks = ['Home', 'Study', 'Notes', 'About', 'Explore']
+
+const navActiveColors: Record<string, string> = {
+  Home: C.terra,
+  Study: C.olive,
+  Notes: C.lavender,
+  About: C.goldDeep,
+  Explore: C.rose,
+}
 
 function AuthArea({ onSignIn }: { onSignIn: () => void }) {
   const { user, logout } = useUser()
@@ -266,25 +274,27 @@ export default function SiteHeader({
         {menuOpen && (
           <div className="md:hidden mt-4 pb-6 border-t" style={{ borderColor: `${C.goldDeep}22` }}>
             <nav className="pt-4 flex flex-col gap-0.5">
-              {navLinks.map((link) => (
-                <button
-                  key={link}
-                  onClick={() => handleNav(link)}
-                  className={`pr-4 pl-6 py-2.5 text-right rounded transition-all duration-200 hover:bg-[rgba(148,155,97,0.16)] active:bg-[rgba(148,155,97,0.28)] ${
-                    activeNav === link ? 'bg-[rgba(148,155,97,0.22)]' : 'bg-transparent'
-                  }`}
-                  style={{
-                    fontFamily: FONT_SERIF,
-                    fontWeight: activeNav === link ? 500 : 400,
-                    fontSize: '16px',
-                    letterSpacing: '0.16em',
-                    textTransform: 'lowercase',
-                    color: C.oliveDark,
-                  }}
-                >
-                  {link}
-                </button>
-              ))}
+              {navLinks.map((link) => {
+                const isActive = activeNav === link
+                const activeColor = navActiveColors[link] ?? C.oliveDark
+                return (
+                  <button
+                    key={link}
+                    onClick={() => handleNav(link)}
+                    className="pr-4 pl-6 py-2.5 text-right rounded transition-colors duration-200 hover:bg-[rgba(148,155,97,0.10)]"
+                    style={{
+                      fontFamily: FONT_SERIF,
+                      fontWeight: isActive ? 500 : 400,
+                      fontSize: '16px',
+                      letterSpacing: '0.16em',
+                      textTransform: 'lowercase',
+                      color: isActive ? activeColor : C.oliveDark,
+                    }}
+                  >
+                    {link}
+                  </button>
+                )
+              })}
             </nav>
             <div className="h-px my-4" style={{ background: `${C.goldDeep}1a` }} />
             <MobileAuthArea onSignIn={onSignIn} />

@@ -335,10 +335,10 @@ export function isWeekComplete(
 export function breakAfterWeeks(part: 1 | 2 | 3): Set<number> {
   const weeks = getStudyPart(part).weeks
   const breaks = new Set<number>()
-  weeks.forEach((week, i) => {
-    const atGroupEnd = (i + 1) % 4 === 0
-    const isLast = i === weeks.length - 1
-    if (atGroupEnd && !isLast) breaks.add(week.number)
+  // Global break points: after weeks 4, 8, 12, 16 (no break after 19)
+  const globalBreaks = new Set([4, 8, 12, 16])
+  weeks.forEach((week) => {
+    if (globalBreaks.has(week.number)) breaks.add(week.number)
   })
   return breaks
 }

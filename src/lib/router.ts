@@ -21,7 +21,7 @@ import type { BibleVersion } from '@/data/isaiah'
 
 history.scrollRestoration = 'manual'
 
-export type Page = 'home' | 'study' | 'notes' | 'about'
+export type Page = 'home' | 'study' | 'notes' | 'about' | 'explore'
 
 export interface AppRoute {
   page: Page
@@ -49,6 +49,7 @@ export function parseRoute(pathname = window.location.pathname, search = window.
   if (!first) return { page: 'home' }
   if (first === 'notes') return { page: 'notes' }
   if (first === 'about') return { page: 'about' }
+  if (first === 'explore') return { page: 'explore' }
   if (first !== 'study') return { page: 'home' }
 
   const rest = segs.slice(1)
@@ -78,6 +79,7 @@ export function routeToPath(route: AppRoute): string {
   if (route.page === 'home') return base
   if (route.page === 'notes') return `${base}notes`
   if (route.page === 'about') return `${base}about`
+  if (route.page === 'explore') return `${base}explore`
   if (route.view !== 'isaiah') return `${base}study`
 
   let path = `${base}study/isaiah`

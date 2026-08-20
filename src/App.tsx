@@ -48,7 +48,9 @@ export default function App() {
         ? "Study"
         : route.page === "notes"
           ? "Notes"
-          : "About"
+          : route.page === "explore"
+            ? "Explore"
+            : "About"
   const studyView =
     route.page === "study" ? (route.view ?? "library") : "library"
 
@@ -56,6 +58,7 @@ export default function App() {
     if (link === "Home") navigate({ page: "home" })
     else if (link === "Study") navigate({ page: "study", view: "library" })
     else if (link === "Notes") navigate({ page: "notes" })
+    else if (link === "Explore") navigate({ page: "explore" })
     else navigate({ page: "about" })
   }
 
@@ -291,6 +294,34 @@ export default function App() {
                 >
                   — <span style={{ color: `${C.ink}bb` }}>karish</span>
                 </span>
+              </p>
+            </section>
+          )}
+
+          {/* ══ EXPLORE ══ */}
+          {activeNav === "Explore" && (
+            <section className="max-w-xl mx-auto text-center py-8 md:py-16">
+              <p
+                className="text-[15px] md:text-[16px] leading-relaxed max-w-md mx-auto"
+                style={{
+                  fontFamily: FONT_SANS,
+                  fontWeight: 300,
+                  color: `${C.ink}aa`,
+                  lineHeight: 2,
+                }}
+              >
+                My journey with Jesus, the stories, the questions, the lessons,
+                and the moments in between.
+              </p>
+              <p
+                className="text-[13px] mt-6 uppercase"
+                style={{
+                  fontFamily: FONT_SANS,
+                  fontWeight: 500,
+                  color: C.lavender,
+                }}
+              >
+                Coming soon.
               </p>
             </section>
           )}

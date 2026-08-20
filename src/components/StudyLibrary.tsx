@@ -16,7 +16,7 @@ export interface StudyInfo {
 }
 
 export const STUDIES: StudyInfo[] = [
-  { id: 'isaiah', title: 'Isaiah', tagline: 'An in-depth study through the book of Isaiah', status: 'active' },
+  { id: 'isaiah', title: 'Isaiah', tagline: 'A study through the book of Isaiah', status: 'active' },
   { id: 'acts', title: 'Acts', tagline: 'Study of Acts', status: 'coming-soon' },
   { id: 'revelation', title: 'Revelation', tagline: 'Study of Revelation', status: 'coming-soon' },
   { id: 'ruth', title: 'Ruth', tagline: 'Study of Ruth', status: 'coming-soon' },
@@ -87,7 +87,7 @@ export default function StudyLibrary({ onOpenIsaiah }: { onOpenIsaiah: () => voi
                 The Book of <span style={{ color: C.terra, fontStyle: 'italic' }}>Isaiah</span>
               </h3>
               <p className="text-sm italic mt-2" style={{ fontFamily: "'Fraunces', serif", color: `${C.ink}77` }}>
-                An in-depth study through the book of Isaiah
+                A study through the book of Isaiah
               </p>
               <p className="text-xs mt-3" style={{ fontFamily: "'Source Sans 3', sans-serif", color: `${C.ink}55` }}>
                 3 parts · 66 chapters · {TOTAL_WEEKS} weekly sessions
