@@ -364,12 +364,13 @@ function WeekStrip({
                     </span>
                     <div className="h-px w-5" style={{ background: `${C.ink}22` }} />
                   </div>
-                  <div className="md:hidden flex-shrink-0 flex flex-col items-center justify-center rounded border px-2.5 py-2"
-                    style={{ borderColor: `${C.ink}22`, background: `${C.ink}06` }}>
-                    <span className="text-[9px] tracking-[0.3em] uppercase"
+                  <div className="md:hidden flex-shrink-0 flex items-center gap-1.5 px-2 py-2">
+                    <div className="h-px w-4" style={{ background: `${C.ink}22` }} />
+                    <span className="text-[8px] tracking-[0.3em] uppercase"
                       style={{ fontFamily: "'Fraunces', serif", color: `${C.ink}44`, fontWeight: 400 }}>
                       break
                     </span>
+                    <div className="h-px w-4" style={{ background: `${C.ink}22` }} />
                   </div>
                 </>
               )}

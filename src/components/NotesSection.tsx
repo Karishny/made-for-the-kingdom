@@ -346,69 +346,89 @@ export default function NotesSection({
         </div>
       ) : (
         <>
-          {/* Community Notes / My Notes / Notifications */}
-          <div
-            className="mb-6 inline-flex rounded border overflow-hidden"
-            style={{ borderColor: `${C.ink}18` }}
-          >
-            <button
-              type="button"
-              onClick={() => {
-                setTab("community")
-                setActiveNote(null)
-              }}
-              className="px-4 py-2 text-xs tracking-[0.16em] uppercase cursor-pointer transition-colors duration-150"
-              style={{
-                fontFamily: FONT_SANS,
-                fontWeight: 600,
-                color: tab === "community" ? C.bg : `${C.ink}66`,
-                background: tab === "community" ? C.terra : "transparent",
-              }}
+          {/* Community Notes / My Notes + notification bell */}
+          <div className="mb-6 flex items-center gap-3">
+            <div
+              className="inline-flex rounded border overflow-hidden"
+              style={{ borderColor: `${C.ink}18` }}
             >
-              Community Notes · {communityNotes.length}
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setTab("mine")
-                setActiveNote(null)
-              }}
-              className="px-4 py-2 text-xs tracking-[0.16em] uppercase cursor-pointer transition-colors duration-150"
-              style={{
-                fontFamily: FONT_SANS,
-                fontWeight: 600,
-                color: tab === "mine" ? C.bg : `${C.ink}66`,
-                background: tab === "mine" ? C.terra : "transparent",
-                borderLeft: `1px solid ${C.ink}18`,
-              }}
-            >
-              My Notes · {myNotes.length}
-            </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setTab("community")
+                  setActiveNote(null)
+                }}
+                className="px-4 py-2 text-xs tracking-[0.16em] uppercase cursor-pointer transition-colors duration-150"
+                style={{
+                  fontFamily: FONT_SANS,
+                  fontWeight: 600,
+                  color: tab === "community" ? C.bg : `${C.ink}66`,
+                  background: tab === "community" ? C.terra : "transparent",
+                }}
+              >
+                Community Notes · {communityNotes.length}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setTab("mine")
+                  setActiveNote(null)
+                }}
+                className="px-4 py-2 text-xs tracking-[0.16em] uppercase cursor-pointer transition-colors duration-150"
+                style={{
+                  fontFamily: FONT_SANS,
+                  fontWeight: 600,
+                  color: tab === "mine" ? C.bg : `${C.ink}66`,
+                  background: tab === "mine" ? C.terra : "transparent",
+                  borderLeft: `1px solid ${C.ink}18`,
+                }}
+              >
+                My Notes · {myNotes.length}
+              </button>
+            </div>
+
+            <div className="flex-1" />
+
+            {/* Notification bell — standalone action button */}
             <button
               type="button"
               onClick={() => {
                 setTab("notifications")
                 setActiveNote(null)
               }}
-              className="px-4 py-2 text-xs tracking-[0.16em] uppercase cursor-pointer transition-colors duration-150 inline-flex items-center gap-1.5"
+              className="relative inline-flex items-center gap-1.5 rounded-sm px-3 py-2 text-xs cursor-pointer transition-all duration-150"
               style={{
                 fontFamily: FONT_SANS,
                 fontWeight: 600,
                 color: tab === "notifications" ? C.bg : `${C.ink}66`,
-                background: tab === "notifications" ? C.terra : "transparent",
-                borderLeft: `1px solid ${C.ink}18`,
+                background: tab === "notifications" ? C.terra : `${C.ink}04`,
+                border: `1px solid ${tab === "notifications" ? `${C.terra}40` : `${C.ink}18`}`,
               }}
+              aria-label={`Notifications${unreadCount > 0 ? `, ${unreadCount} unread` : ""}`}
             >
-              <span aria-hidden="true">🔔</span>
-              Notifications
+              <svg
+                width="15"
+                height="15"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+                <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+              </svg>
               {unreadCount > 0 && (
                 <span
-                  className="inline-flex items-center justify-center rounded-full min-w-[18px] h-[18px] text-[10px] px-1"
+                  className="inline-flex items-center justify-center rounded-full min-w-[16px] h-[16px] text-[9px] px-1"
                   style={{
                     color: "#fff",
                     background: C.terraDark,
                     fontFamily: FONT_SANS,
                     fontWeight: 700,
+                    lineHeight: 1,
                   }}
                 >
                   {unreadCount}

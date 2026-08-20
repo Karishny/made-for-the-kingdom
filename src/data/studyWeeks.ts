@@ -199,14 +199,8 @@ function buildWeeks(part: 1 | 2 | 3, weekStart: number): StudyWeek[] {
             {
               title: "Isaiah 6 — Holy, Holy, Holy",
               description: "A deep dive into Isaiah's vision of the Lord in the temple.",
-              url: "https://www.blueletterbible.org/comm/guzik_david/isa/isa6.cfm",
-              source: "David Guzik",
-            },
-            {
-              title: "Isaiah Commentary",
-              description: "Verse-level notes on Isaiah 1–39 with historical context.",
               url: "https://enduringword.com/bible-commentary/isaiah-6/",
-              source: "Enduring Word",
+              source: "David Guzik",
             },
             {
               title: "The Prophetic Messenger and His Message",
