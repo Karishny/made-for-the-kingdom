@@ -198,7 +198,7 @@ function buildWeeks(part: 1 | 2 | 3, weekStart: number): StudyWeek[] {
           copy.commentaries = [
             {
               title: "Isaiah 6 — Holy, Holy, Holy",
-              description: "A deep dive into Isaiah's vision of the Lord in the temple.",
+              description: "An exploration of Isaiah's vision of the Lord in the temple.",
               url: "https://enduringword.com/bible-commentary/isaiah-6/",
               source: "David Guzik",
             },
