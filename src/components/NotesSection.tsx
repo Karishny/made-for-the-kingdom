@@ -92,6 +92,7 @@ export default function NotesSection({
   const [loadError, setLoadError] = useState(false)
   const [tab, setTab] = useState<NoteTab>("community")
   const [drafting, setDrafting] = useState(false)
+  const [editingNote, setEditingNote] = useState<StudyNote | null>(null)
   const [filtersOpen, setFiltersOpen] = useState(false)
   const [activeNote, setActiveNote] = useState<string | null>(null)
   const [pendingDelete, setPendingDelete] = useState<string | null>(null)
@@ -170,6 +171,7 @@ export default function NotesSection({
 
   function openNote(id: string) {
     setActiveNote((cur) => (cur === id ? null : id))
+    setEditingNote(null)
     setReplyBody("")
     setPendingDelete(null)
   }
@@ -575,6 +577,24 @@ export default function NotesSection({
             </div>
           )}
 
+          {/* Edit note compose */}
+          {editingNote && user && (
+            <div className="mb-6">
+              <NoteComposer
+                user={user}
+                editingNote={editingNote}
+                studies={studies.filter((s) => s !== "All Studies")}
+                onCancel={() => setEditingNote(null)}
+                onUpdate={(updated) => {
+                  setNotes((prev) =>
+                    prev.map((n) => (n.id === updated.id ? updated : n)),
+                  )
+                  setEditingNote(null)
+                }}
+              />
+            </div>
+          )}
+
           {/* Notes list OR Notifications list */}
           {tab !== "notifications" ? (
             loading ? (
@@ -820,21 +840,39 @@ export default function NotesSection({
                               reply
                             </button>
                             {expanded && note.authorId === user?.id && (
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  setPendingDelete(note.id)
-                                }}
-                                className="text-xs px-2 py-0.5 rounded-sm transition-all duration-150 cursor-pointer"
-                                style={{
-                                  color: C.rose,
-                                  border: `1px solid ${C.rose}35`,
-                                  fontFamily: FONT_SANS,
-                                  background: `${C.rose}08`,
-                                }}
-                              >
-                                Delete
-                              </button>
+                              <>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    setEditingNote(note)
+                                    setPendingDelete(null)
+                                  }}
+                                  className="text-xs px-2 py-0.5 rounded-sm transition-all duration-150 cursor-pointer"
+                                  style={{
+                                    color: `${C.ink}66`,
+                                    border: `1px solid ${C.ink}22`,
+                                    fontFamily: FONT_SANS,
+                                    background: `${C.ink}04`,
+                                  }}
+                                >
+                                  Edit
+                                </button>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    setPendingDelete(note.id)
+                                  }}
+                                  className="text-xs px-2 py-0.5 rounded-sm transition-all duration-150 cursor-pointer"
+                                  style={{
+                                    color: C.rose,
+                                    border: `1px solid ${C.rose}35`,
+                                    fontFamily: FONT_SANS,
+                                    background: `${C.rose}08`,
+                                  }}
+                                >
+                                  Delete
+                                </button>
+                              </>
                             )}
                           </div>
 

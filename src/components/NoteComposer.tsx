@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import Button from '@/components/Button'
 import {
   createNote,
+  updateNote,
   NOTE_TYPES,
   noteTypeColor,
   type NewNote,
@@ -133,19 +134,36 @@ export function NoteDropdown({
 export default function NoteComposer({
   user,
   initialDraft,
+  editingNote,
   studies,
   accent = C.terra,
   onSaved,
+  onUpdate,
   onCancel,
 }: {
   user: User
   initialDraft?: Partial<NewNote>
+  editingNote?: StudyNote
   studies: string[]
   accent?: string
-  onSaved: (note: StudyNote) => void
+  onSaved?: (note: StudyNote) => void
+  onUpdate?: (note: StudyNote) => void
   onCancel: () => void
 }) {
-  const [draft, setDraft] = useState(() => ({ ...DEFAULT_DRAFT, ...initialDraft }))
+  const isEditing = !!editingNote
+  const [draft, setDraft] = useState(() => {
+    if (editingNote) {
+      return {
+        study: editingNote.study || 'Isaiah',
+        scripture: editingNote.scripture || '',
+        noteType: editingNote.noteType || 'Question',
+        title: editingNote.title || '',
+        tag: editingNote.tag || '',
+        body: editingNote.body || '',
+      }
+    }
+    return { ...DEFAULT_DRAFT, ...initialDraft }
+  })
   const [saveError, setSaveError] = useState(false)
   const [saving, setSaving] = useState(false)
 
@@ -162,23 +180,41 @@ export default function NoteComposer({
     setSaveError(false)
     setSaving(true)
     try {
-      const created = await createNote({
-        authorId: user.id,
-        authorName: user.name,
-        authorColor: user.color,
-        authorInitials: user.initials,
-        study: draft.study || 'Isaiah',
-        part: draft.part,
-        week: draft.week,
-        chapter: draft.chapter,
-        scripture: draft.scripture || 'Isaiah',
-        noteType: draft.noteType || 'Question',
-        title: draft.title.trim() || 'Untitled Note',
-        body: draft.body.trim(),
-        tag: draft.tag.trim() || 'Study Note',
-        date: new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }),
-      })
-      onSaved(created)
+      if (isEditing && editingNote) {
+        await updateNote(editingNote.id, {
+          title: draft.title.trim() || 'Untitled Note',
+          body: draft.body.trim(),
+          tag: draft.tag.trim() || 'Study Note',
+          noteType: draft.noteType || 'Question',
+          scripture: draft.scripture || 'Isaiah',
+        })
+        onUpdate?.({
+          ...editingNote,
+          title: draft.title.trim() || 'Untitled Note',
+          body: draft.body.trim(),
+          tag: draft.tag.trim() || 'Study Note',
+          noteType: draft.noteType || 'Question',
+          scripture: draft.scripture || 'Isaiah',
+        })
+      } else {
+        const created = await createNote({
+          authorId: user.id,
+          authorName: user.name,
+          authorColor: user.color,
+          authorInitials: user.initials,
+          study: draft.study || 'Isaiah',
+          part: draft.part,
+          week: draft.week,
+          chapter: draft.chapter,
+          scripture: draft.scripture || 'Isaiah',
+          noteType: draft.noteType || 'Question',
+          title: draft.title.trim() || 'Untitled Note',
+          body: draft.body.trim(),
+          tag: draft.tag.trim() || 'Study Note',
+          date: new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }),
+        })
+        onSaved?.(created)
+      }
     } catch {
       setSaveError(true)
     } finally {
@@ -194,7 +230,7 @@ export default function NoteComposer({
         <Avatar name={user.name} color={user.color} initials={user.initials} />
         <span className="text-xs tracking-widest uppercase"
           style={{ color: accent, fontFamily: FONT_SANS, fontWeight: 600 }}>
-          {user.name}
+          {isEditing ? 'editing note' : user.name}
         </span>
         <div className="flex-1" />
         <button onClick={onCancel} className="text-xs cursor-pointer"
@@ -266,7 +302,7 @@ export default function NoteComposer({
         )}
         <div className="flex justify-end">
           <Button onClick={() => void saveNote()} variant="solid" size="sm" disabled={!draft.body.trim() || saving}>
-            {saving ? 'saving…' : 'save note'}
+            {saving ? 'saving…' : isEditing ? 'save changes' : 'save note'}
           </Button>
         </div>
       </div>
