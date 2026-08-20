@@ -151,6 +151,24 @@ function buildWeeks(part: 1 | 2 | 3, weekStart: number): StudyWeek[] {
           ]
           copy.placeholder = "Watch this week's teaching video"
         }
+        if (copy.type === "video" && weekNumber === 3) {
+          copy.videos = [
+            {
+              title: "Mission Messiah: Jesus is Born | Isaiah 7-9 | Gary Hamrick",
+              url: "https://youtu.be/tjo6BSaxQuw?si=6kRJBwwOmrCjBg-q",
+            },
+          ]
+          copy.placeholder = "Watch this week's teaching video"
+        }
+        if (copy.type === "video" && weekNumber === 4) {
+          copy.videos = [
+            {
+              title: "Who Is Satan?  |  Isaiah 14  |  Gary Hamrick",
+              url: "https://youtu.be/8oThJVrxQx4?si=1nFoKCRgy2FxtCUG",
+            },
+          ]
+          copy.placeholder = "Watch this week's teaching video"
+        }
         if (copy.type === "podcast" && weekNumber === 1) {
           copy.podcasts = [
             {
