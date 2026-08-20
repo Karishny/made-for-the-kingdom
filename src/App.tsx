@@ -63,7 +63,7 @@ export default function App() {
   }
 
   function handleStartStudy() {
-    navigate({ page: "study", view: "isaiah" })
+    navigate({ page: "study", view: "library" })
   }
 
   const isWideMain =
