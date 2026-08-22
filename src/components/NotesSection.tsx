@@ -8,10 +8,14 @@ import {
   addReply,
   removeNote,
   subscribeNotes,
+  esvBibleUrl,
+  cvRef,
   NOTE_TYPES,
   noteTypeLabel,
   noteTypeColor,
+  youVersionUrl,
   type StudyNote,
+  type ComplementaryVerse,
   type NoteNotification,
   getNotifications,
   markNotificationRead,
@@ -674,16 +678,50 @@ export default function NotesSection({
                                 {note.study}
                               </span>
                             )}
-                            <span
-                              className="text-xs"
-                              style={{
-                                fontFamily: FONT_SERIF,
-                                fontStyle: "italic",
-                                color: `${C.ink}66`,
-                              }}
-                            >
-                              {note.scripture}
-                            </span>
+                            {note.scripture &&
+                            youVersionUrl(note.scripture) ? (
+                              <a
+                                href={youVersionUrl(note.scripture)!}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                onClick={(e) => e.stopPropagation()}
+                                className="text-xs inline-flex items-center gap-1 transition-opacity duration-150 hover:opacity-70"
+                                style={{
+                                  fontFamily: FONT_SERIF,
+                                  fontStyle: "italic",
+                                  color: `${C.ink}66`,
+                                }}
+                              >
+                                {note.scripture}
+                                <svg
+                                  width="10"
+                                  height="10"
+                                  viewBox="0 0 24 24"
+                                  fill="none"
+                                  aria-hidden="true"
+                                  style={{ opacity: 0.6 }}
+                                >
+                                  <path
+                                    d="M7 17L17 7M17 7H7M17 7V17"
+                                    stroke="currentColor"
+                                    strokeWidth="2"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                  />
+                                </svg>
+                              </a>
+                            ) : (
+                              <span
+                                className="text-xs"
+                                style={{
+                                  fontFamily: FONT_SERIF,
+                                  fontStyle: "italic",
+                                  color: `${C.ink}66`,
+                                }}
+                              >
+                                {note.scripture}
+                              </span>
+                            )}
                           </div>
 
                           <h4
@@ -698,34 +736,117 @@ export default function NotesSection({
                             {note.title}
                           </h4>
 
+                          {/* Complementary Verses — rendered as content where body text would be */}
+                          {note.noteType === "Complementary Verse" && (() => {
+                            const cvs: ComplementaryVerse[] = note.complementaryVerses ?? []
+                            const refs = cvs.length > 0
+                              ? cvs
+                              : note.complementaryBook && note.complementaryChapter
+                                ? [{ id: 'legacy', noteId: note.id, book: note.complementaryBook, chapter: note.complementaryChapter, verse: note.complementaryVerse, sortOrder: 0 }]
+                                : []
+                            if (refs.length === 0) return null
+                            return (
+                              <div className="mb-1">
+                                {refs.map((cv) => {
+                                  const label = cvRef(cv)
+                                  const url = esvBibleUrl(cv.book, cv.chapter, cv.verse)
+                                  return url ? (
+                                    <a
+                                      key={cv.id}
+                                      href={url}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      onClick={(e) => e.stopPropagation()}
+                                      className="inline-flex items-center gap-1.5 text-sm transition-opacity duration-150 hover:opacity-70"
+                                      style={{
+                                        fontFamily: FONT_SANS,
+                                        color: C.lavender,
+                                        lineHeight: "1.8",
+                                        fontWeight: 500,
+                                        textDecoration: "none",
+                                      }}
+                                    >
+                                      {label}
+                                      <svg
+                                        width="11"
+                                        height="11"
+                                        viewBox="0 0 24 24"
+                                        fill="none"
+                                        aria-hidden="true"
+                                        style={{ opacity: 0.65, flexShrink: 0 }}
+                                      >
+                                        <path
+                                          d="M7 17L17 7M17 7H7M17 7V17"
+                                          stroke="currentColor"
+                                          strokeWidth="2"
+                                          strokeLinecap="round"
+                                          strokeLinejoin="round"
+                                        />
+                                      </svg>
+                                    </a>
+                                  ) : (
+                                    <span
+                                      key={cv.id}
+                                      className="inline-flex items-center gap-1.5 text-sm"
+                                      style={{
+                                        fontFamily: FONT_SANS,
+                                        color: C.lavender,
+                                        lineHeight: "1.8",
+                                        fontWeight: 500,
+                                      }}
+                                    >
+                                      {label}
+                                    </span>
+                                  )
+                                })}
+                              </div>
+                            )
+                          })()}
+
                           {!expanded ? (
-                            <p
-                              className="text-sm"
-                              style={
-                                {
+                            note.body ? (
+                              <p
+                                className="text-sm"
+                                style={
+                                  {
+                                    fontFamily: FONT_SANS,
+                                    color: `${C.ink}77`,
+                                    lineHeight: "1.6",
+                                    whiteSpace: "pre-wrap",
+                                    overflow: "hidden",
+                                    display: "-webkit-box",
+                                    WebkitLineClamp: 2,
+                                    WebkitBoxOrient: "vertical",
+                                  } as React.CSSProperties
+                                }
+                              >
+                                {note.body}
+                              </p>
+                            ) : note.noteType !== "Complementary Verse" ? (
+                              <p
+                                className="text-sm italic"
+                                style={{
                                   fontFamily: FONT_SANS,
-                                  color: `${C.ink}77`,
+                                  color: `${C.ink}44`,
                                   lineHeight: "1.6",
-                                  overflow: "hidden",
-                                  display: "-webkit-box",
-                                  WebkitLineClamp: 2,
-                                  WebkitBoxOrient: "vertical",
-                                } as React.CSSProperties
-                              }
-                            >
-                              {note.body}
-                            </p>
+                                }}
+                              >
+                                No written note yet.
+                              </p>
+                            ) : null
                           ) : (
-                            <p
-                              className="text-sm mt-1 leading-relaxed whitespace-pre-line"
-                              style={{
-                                fontFamily: FONT_SANS,
-                                color: `${C.ink}bb`,
-                                lineHeight: "1.8",
-                              }}
-                            >
-                              {note.body}
-                            </p>
+                            note.body ? (
+                              <p
+                                className="text-sm mt-1 leading-relaxed whitespace-pre-line"
+                                style={{
+                                  fontFamily: FONT_SANS,
+                                  color: `${C.ink}bb`,
+                                  lineHeight: "1.8",
+                                }}
+                              >
+                                {note.body}
+                              </p>
+                            ) : null
                           )}
 
                           {tags.length > 0 && (
@@ -808,37 +929,35 @@ export default function NotesSection({
                               {replies.length}{" "}
                               {replies.length === 1 ? "reply" : "replies"}
                             </span>
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                openReply(note.id)
-                              }}
-                              className="text-xs px-3 py-2 rounded-sm transition-all duration-150 cursor-pointer inline-flex items-center gap-1"
-                              style={{
-                                color: expanded ? accent : `${C.ink}66`,
-                                border: `1px solid ${
-                                  expanded ? `${accent}40` : `${C.ink}22`
-                                }`,
-                                fontFamily: FONT_SANS,
-                                fontWeight: 600,
-                                background: expanded
-                                  ? `${accent}08`
-                                  : `${C.ink}04`,
-                              }}
-                            >
-                              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" aria-hidden="true" style={{ opacity: 0.8 }}>
-                                <path
-                                  d="M12 21 C7 21 4 17.5 4 13 C4 8.5 7.5 5 12 5 C16.5 5 20 8.5 20 13 C20 15.5 18.8 17.5 17 19 L20 21 Z"
-                                  stroke="currentColor"
-                                  strokeWidth="1.6"
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                />
-                                <path d="M8 12 H16 M12 8 V16" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-                              </svg>
-                              reply
-                            </button>
+                            {!expanded && (
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  openReply(note.id)
+                                }}
+                                className="text-xs px-3 py-2 rounded-sm transition-all duration-150 cursor-pointer inline-flex items-center gap-1"
+                                style={{
+                                  color: C.olive,
+                                  border: `1px solid ${C.olive}40`,
+                                  fontFamily: FONT_SANS,
+                                  fontWeight: 600,
+                                  background: "transparent",
+                                }}
+                              >
+                                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" aria-hidden="true" style={{ opacity: 0.8 }}>
+                                  <path
+                                    d="M12 21 C7 21 4 17.5 4 13 C4 8.5 7.5 5 12 5 C16.5 5 20 8.5 20 13 C20 15.5 18.8 17.5 17 19 L20 21 Z"
+                                    stroke="currentColor"
+                                    strokeWidth="1.6"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                  />
+                                  <path d="M8 12 H16 M12 8 V16" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+                                </svg>
+                                reply
+                              </button>
+                            )}
                             {expanded && note.authorId === user?.id && (
                               <>
                                 <button
@@ -847,7 +966,7 @@ export default function NotesSection({
                                     setEditingNote(note)
                                     setPendingDelete(null)
                                   }}
-                                  className="text-xs px-2 py-0.5 rounded-sm transition-all duration-150 cursor-pointer"
+                                  className="text-xs px-2 py-1.5 rounded-sm transition-all duration-150 cursor-pointer"
                                   style={{
                                     color: `${C.ink}66`,
                                     border: `1px solid ${C.ink}22`,
@@ -862,15 +981,18 @@ export default function NotesSection({
                                     e.stopPropagation()
                                     setPendingDelete(note.id)
                                   }}
-                                  className="text-xs px-2 py-0.5 rounded-sm transition-all duration-150 cursor-pointer"
+                                  aria-label="Delete note"
+                                  className="text-xs min-w-[32px] min-h-[32px] rounded-sm transition-all duration-150 cursor-pointer inline-flex items-center justify-center"
                                   style={{
-                                    color: C.rose,
-                                    border: `1px solid ${C.rose}35`,
+                                    color: `${C.rose}99`,
+                                    border: `1px solid ${C.rose}25`,
                                     fontFamily: FONT_SANS,
-                                    background: `${C.rose}08`,
+                                    background: `${C.rose}06`,
                                   }}
                                 >
-                                  Delete
+                                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true">
+                                    <path d="M18 6L6 18M6 6l12 12" />
+                                  </svg>
                                 </button>
                               </>
                             )}

@@ -148,6 +148,10 @@ function buildWeeks(part: 1 | 2 | 3, weekStart: number): StudyWeek[] {
               title: 'Isaiah 4\u20136 \u2014 \u201CI saw the Lord, high and lifted up.\u201D',
               url: "https://youtu.be/jMkYbPN3l08?si=h78tzXgP1cxIo3c2",
             },
+            {
+              title: "History of Ancient Israel and Judah explained in 5 minutes",
+              url: "https://youtu.be/ZybFYikBMLg?si=wRFjk53FMW5dYyNL",
+            },
           ]
           copy.placeholder = "Watch this week's teaching video"
         }
@@ -157,6 +161,18 @@ function buildWeeks(part: 1 | 2 | 3, weekStart: number): StudyWeek[] {
               title: "Mission Messiah: Jesus is Born | Isaiah 7-9 | Gary Hamrick",
               url: "https://youtu.be/tjo6BSaxQuw?si=6kRJBwwOmrCjBg-q",
             },
+            {
+              title: "In God We Trust - Part 1 // Isaiah 8:1-22",
+              url: "https://youtu.be/cRL0J4hec60?si=8sNHLb145ayn8TqX",
+            },
+            {
+              title: "Peoples of the Bible: The Assyrians",
+              url: "https://youtu.be/f9KE83dCBHw?si=K8YV1FtHO-SGN_yH",
+            },
+            {
+              title: "Who is Maher-shalal-hash-baz? | Part 5",
+              url: "https://youtu.be/iNDlHUzcbFU?si=1U_6BFmHTpJ3vbot",
+            },
           ]
           copy.placeholder = "Watch this week's teaching video"
         }
@@ -165,6 +181,15 @@ function buildWeeks(part: 1 | 2 | 3, weekStart: number): StudyWeek[] {
             {
               title: "Who Is Satan?  |  Isaiah 14  |  Gary Hamrick",
               url: "https://youtu.be/8oThJVrxQx4?si=1nFoKCRgy2FxtCUG",
+            },
+          ]
+          copy.placeholder = "Watch this week's teaching video"
+        }
+        if (copy.type === "video" && weekNumber === 6) {
+          copy.videos = [
+            {
+              title: "The Story of Uzziah, The Leprous King of Judah: Bible Story Animation of King Uzziah",
+              url: "https://youtu.be/TiCnCoioP0w?si=3qMwTDRcTtMAlI8k",
             },
           ]
           copy.placeholder = "Watch this week's teaching video"
@@ -235,7 +260,24 @@ function buildWeeks(part: 1 | 2 | 3, weekStart: number): StudyWeek[] {
           ]
           copy.placeholder = "Read this week's written commentary"
         }
-        if (copy.type === "commentary" && weekNumber >= 3 && weekNumber <= 6) {
+        if (copy.type === "commentary" && weekNumber === 3) {
+          copy.commentaries = [
+            {
+              title: "Enduring Word — Isaiah 8 Commentary",
+              description: "Verse-level notes with historical context and application.",
+              url: "https://enduringword.com/bible-commentary/isaiah-8/",
+              source: "Enduring Word",
+            },
+            {
+              title: "Matthew Henry Commentary — Isaiah 8",
+              description: "A comprehensive verse-by-verse commentary on Isaiah 8.",
+              url: "https://www.blueletterbible.org/Comm/mhc/Isa/Isa_008.cfm",
+              source: "Matthew Henry",
+            },
+          ]
+          copy.placeholder = "Read this week's written commentary"
+        }
+        if (copy.type === "commentary" && weekNumber >= 4 && weekNumber <= 6) {
           copy.commentaries = [
             {
               title: "Isaiah Commentary",
